@@ -40,11 +40,25 @@ export default function LoginModal() {
       handleClose();
       navigate('/dashboard');
     } catch (err: any) {
-      let errorMessage = 'Invalid email or password. Please try again.';
-      if (err.message && err.message.includes('502')) {
+      const code = err.code || '';
+      let errorMessage = err.message || 'Something went wrong. Please try again.';
+      
+      if (code === 'auth/invalid-credential' || code === 'auth/wrong-password') {
+        errorMessage = 'Incorrect password. Please try again.';
+      } else if (code === 'auth/user-not-found') {
+        errorMessage = 'No account found with this email. Try registering first.';
+      } else if (code === 'auth/email-already-in-use') {
+        errorMessage = 'This email is already registered. Try signing in instead.';
+      } else if (code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak. Please use at least 6 characters.';
+      } else if (code === 'auth/invalid-email') {
+        errorMessage = 'Please enter a valid email address.';
+      } else if (code === 'auth/too-many-requests') {
+        errorMessage = 'Too many failed attempts. Please try again later.';
+      } else if (code === 'auth/operation-not-allowed') {
+        errorMessage = 'Email/Password sign-in is not enabled. Contact support.';
+      } else if (err.message && err.message.includes('502')) {
         errorMessage = 'Unable to connect to the server. Please try again later.';
-      } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-        errorMessage = 'Invalid email or password. Please try again.';
       }
       toast.error(errorMessage);
     } finally {
