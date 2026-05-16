@@ -1,11 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HiOutlineMail, HiOutlineLockClosed, HiOutlineUser, HiOutlineX } from 'react-icons/hi';
+import { HiOutlineMail, HiOutlineLockClosed, HiOutlineUser, HiOutlineX, HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import toast from 'react-hot-toast';
+
+function getPasswordStrength(password: string) {
+  let score = 0;
+  if (password.length >= 6) score++;
+  if (password.length >= 10) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+  if (score <= 1) return { label: 'Weak', color: 'bg-red-500', width: '20%' };
+  if (score <= 2) return { label: 'Fair', color: 'bg-orange-500', width: '40%' };
+  if (score <= 3) return { label: 'Good', color: 'bg-yellow-500', width: '60%' };
+  if (score <= 4) return { label: 'Strong', color: 'bg-green-500', width: '80%' };
+  return { label: 'Very Strong', color: 'bg-emerald-500', width: '100%' };
+}
 
 export default function LoginModal() {
   const [isRegister, setIsRegister] = useState(false);
@@ -13,6 +27,8 @@ export default function LoginModal() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const passwordStrength = useMemo(() => getPasswordStrength(password), [password]);
   
   const { login, register, resetPassword } = useAuthStore();
   const { isLoginModalOpen, setLoginModalOpen } = useUIStore();
@@ -187,15 +203,42 @@ export default function LoginModal() {
                     <div className="relative">
                       <HiOutlineLockClosed className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
                       <input
-                        type="password"
+                        type={showPassword ? 'text' : 'password'}
                         placeholder="••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-200 dark:border-dark-600 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 transition-all"
+                        className="w-full pl-11 pr-12 py-3 rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-200 dark:border-dark-600 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 transition-all"
                         required
                         minLength={6}
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <HiOutlineEyeOff className="w-5 h-5" /> : <HiOutlineEye className="w-5 h-5" />}
+                      </button>
                     </div>
+                    {isRegister && password.length > 0 && (
+                      <div className="mt-2">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">Password strength</span>
+                          <span className={`text-xs font-semibold ${
+                            passwordStrength.label === 'Weak' ? 'text-red-500' :
+                            passwordStrength.label === 'Fair' ? 'text-orange-500' :
+                            passwordStrength.label === 'Good' ? 'text-yellow-500' :
+                            'text-green-500'
+                          }`}>{passwordStrength.label}</span>
+                        </div>
+                        <div className="h-1.5 bg-gray-200 dark:bg-dark-600 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-300 ${passwordStrength.color}`}
+                            style={{ width: passwordStrength.width }}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {!isRegister && (

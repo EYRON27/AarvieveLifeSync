@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HiOutlinePlus, HiOutlineTrash, HiOutlineSearch, HiOutlineEye, HiOutlineEyeOff, HiOutlineClipboard, HiOutlineGlobe } from 'react-icons/hi';
+import { HiOutlinePlus, HiOutlineTrash, HiOutlineSearch, HiOutlineEye, HiOutlineEyeOff, HiOutlineClipboard, HiOutlineGlobe, HiOutlineLockClosed, HiOutlineTag, HiOutlineAnnotation, HiOutlineUser } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import Modal from '@/components/Modal';
 import { PageLoader, EmptyState } from '@/components/LoadingSpinner';
@@ -136,14 +136,46 @@ export default function PasswordVaultPage() {
       {/* Add Modal */}
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Add Password">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input type="text" placeholder="Service name" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input-field" required />
-          <input type="text" placeholder="Username / Email" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} className="input-field" required />
-          <input type="password" placeholder="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="input-field" required />
-          <input type="text" placeholder="Website URL (optional)" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} className="input-field" />
+          <div className="relative">
+            <HiOutlineTag className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input type="text" placeholder="Service name" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input-field pl-12" required />
+          </div>
+          <div className="relative">
+            <HiOutlineUser className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input type="text" placeholder="Username / Email" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} className="input-field pl-12" required />
+          </div>
+          <div>
+            <div className="relative">
+              <HiOutlineLockClosed className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input type="password" placeholder="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="input-field pl-12" required minLength={8} />
+            </div>
+            {form.password.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {[
+                  { test: form.password.length >= 8, label: 'At least 8 characters' },
+                  { test: /[A-Z]/.test(form.password), label: 'One uppercase letter' },
+                  { test: /[a-z]/.test(form.password), label: 'One lowercase letter' },
+                  { test: /[0-9]/.test(form.password), label: 'One number' },
+                  { test: /[^A-Za-z0-9]/.test(form.password), label: 'One special character (!@#$%^&*)' },
+                ].map((rule, i) => (
+                  <div key={i} className={`text-xs flex items-center gap-1.5 ${rule.test ? 'text-green-500' : 'text-gray-400 dark:text-dark-200'}`}>
+                    <span>{rule.test ? '✓' : '○'}</span> {rule.label}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="relative">
+            <HiOutlineGlobe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input type="text" placeholder="Website URL (optional)" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} className="input-field pl-12" />
+          </div>
           <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="input-field">
             {vaultCategories.map((c) => <option key={c} value={c}>{categoryIcons[c]} {c}</option>)}
           </select>
-          <textarea placeholder="Notes (optional)" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="input-field min-h-[60px] resize-none" />
+          <div className="relative">
+            <HiOutlineAnnotation className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
+            <textarea placeholder="Notes (optional)" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="input-field pl-12 min-h-[60px] resize-none" />
+          </div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" className="btn-primary flex-1">Save Password</button>
