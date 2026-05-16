@@ -36,11 +36,15 @@ export const useAuthStore = create<AuthState>()((set) => ({
     try {
       set({ isLoading: true, error: null });
       const cred = await signInWithEmailAndPassword(firebaseAuth, email, password);
-      await authApi.syncUser({
-        uid: cred.user.uid,
-        email: cred.user.email,
-        displayName: cred.user.displayName,
-      });
+      try {
+        await authApi.syncUser({
+          uid: cred.user.uid,
+          email: cred.user.email,
+          displayName: cred.user.displayName,
+        });
+      } catch {
+        // Backend sync failed, but Firebase auth succeeded — continue
+      }
       set({ user: cred.user, isAuthenticated: true, isLoading: false });
     } catch (err: any) {
       set({ error: err.message || 'Login failed', isLoading: false });
@@ -53,7 +57,11 @@ export const useAuthStore = create<AuthState>()((set) => ({
       set({ isLoading: true, error: null });
       const cred = await createUserWithEmailAndPassword(firebaseAuth, email, password);
       await updateProfile(cred.user, { displayName });
-      await authApi.syncUser({ uid: cred.user.uid, email, displayName });
+      try {
+        await authApi.syncUser({ uid: cred.user.uid, email, displayName });
+      } catch {
+        // Backend sync failed, but Firebase auth succeeded — continue
+      }
       set({ user: cred.user, isAuthenticated: true, isLoading: false });
     } catch (err: any) {
       set({ error: err.message || 'Registration failed', isLoading: false });
