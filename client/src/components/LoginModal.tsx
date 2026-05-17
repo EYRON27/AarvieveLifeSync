@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { HiOutlineMail, HiOutlineLockClosed, HiOutlineUser, HiOutlineX, HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
+import { FullScreenLoader } from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
 
 function getPasswordStrength(password: string) {
@@ -14,11 +15,11 @@ function getPasswordStrength(password: string) {
   if (/[A-Z]/.test(password)) score++;
   if (/[0-9]/.test(password)) score++;
   if (/[^A-Za-z0-9]/.test(password)) score++;
-  if (score <= 1) return { label: 'Weak', color: 'bg-red-500', width: '20%' };
+  if (score <= 1) return { label: 'Weak', color: 'bg-rose-500', width: '20%' };
   if (score <= 2) return { label: 'Fair', color: 'bg-orange-500', width: '40%' };
-  if (score <= 3) return { label: 'Good', color: 'bg-yellow-500', width: '60%' };
-  if (score <= 4) return { label: 'Strong', color: 'bg-green-500', width: '80%' };
-  return { label: 'Very Strong', color: 'bg-emerald-500', width: '100%' };
+  if (score <= 3) return { label: 'Good', color: 'bg-amber-500', width: '60%' };
+  if (score <= 4) return { label: 'Strong', color: 'bg-primary-500', width: '80%' };
+  return { label: 'Very Strong', color: 'bg-primary-400', width: '100%' };
 }
 
 export default function LoginModal() {
@@ -30,7 +31,7 @@ export default function LoginModal() {
   const [showPassword, setShowPassword] = useState(false);
   const passwordStrength = useMemo(() => getPasswordStrength(password), [password]);
   
-  const { login, register, resetPassword } = useAuthStore();
+  const { login, register, resetPassword, user } = useAuthStore();
   const { isLoginModalOpen, setLoginModalOpen } = useUIStore();
   const navigate = useNavigate();
 
@@ -48,10 +49,14 @@ export default function LoginModal() {
     try {
       if (isRegister) {
         await register(email, password, displayName);
-        toast.success('Account created successfully!');
+        const name = displayName.split(' ')[0] || email.split('@')[0];
+        toast.success(`Welcome, ${name}! Your account is ready 🎉`);
       } else {
         await login(email, password);
-        toast.success('Welcome back!');
+        // user is set in store after login resolves
+        const storedUser = useAuthStore.getState().user;
+        const name = storedUser?.displayName?.split(' ')[0] || storedUser?.email?.split('@')[0] || '';
+        toast.success(name ? `Welcome back, ${name}! 👋` : 'Welcome back!');
       }
       handleClose();
       navigate('/dashboard');
@@ -104,28 +109,30 @@ export default function LoginModal() {
   const modalContent = (
     <AnimatePresence>
       {isLoginModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+        <div className="fixed inset-0 z-[100] overflow-y-auto">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            className="fixed inset-0 bg-black/60 backdrop-blur-md"
             onClick={handleClose}
           />
 
+          {/* Scroll container — keeps modal above keyboard on mobile */}
+          <div className="flex min-h-full items-center justify-center p-4 sm:p-6 py-8">
           {/* Modal Container */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 30 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="relative w-full max-w-4xl max-h-[90vh] flex flex-col md:flex-row z-10 overflow-hidden rounded-[2rem] shadow-2xl border border-white/10 dark:border-dark-500/50 bg-white/95 dark:bg-dark-700/95"
+            className="relative w-full max-w-4xl flex flex-col md:flex-row z-10 overflow-hidden rounded-[2rem] shadow-2xl border border-white/10 dark:border-dark-500/50"
           >
             {/* Left Side (Branding/Hero) */}
-            <div className="hidden md:flex md:w-5/12 relative flex-col justify-between p-10 bg-gradient-to-br from-primary-600 via-primary-800 to-dark-900 text-white overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-accent-500/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-              <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary-400/30 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+            <div className="hidden md:flex md:w-5/12 relative flex-col justify-between p-10 bg-gradient-to-br from-primary-600 via-primary-700 to-dark-900 text-white overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-accent-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+              <div className="absolute bottom-0 left-0 w-64 h-64 bg-amber-400/15 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
               
               <div className="relative z-10">
                 <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center mb-6 border border-white/20 shadow-lg">
@@ -149,7 +156,7 @@ export default function LoginModal() {
             </div>
 
             {/* Right Side (Form) */}
-            <div className="flex-1 p-8 sm:p-12 overflow-y-auto relative bg-white dark:bg-dark-800">
+            <div className="flex-1 p-8 sm:p-10 relative bg-white dark:bg-dark-800">
               <button
                 onClick={handleClose}
                 className="absolute top-6 right-6 p-2 rounded-full bg-gray-100 dark:bg-dark-600 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
@@ -225,10 +232,10 @@ export default function LoginModal() {
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-xs text-gray-500 dark:text-gray-400">Password strength</span>
                           <span className={`text-xs font-semibold ${
-                            passwordStrength.label === 'Weak' ? 'text-red-500' :
+                            passwordStrength.label === 'Weak' ? 'text-rose-500' :
                             passwordStrength.label === 'Fair' ? 'text-orange-500' :
-                            passwordStrength.label === 'Good' ? 'text-yellow-500' :
-                            'text-green-500'
+                            passwordStrength.label === 'Good' ? 'text-amber-500' :
+                            'text-primary-500'
                           }`}>{passwordStrength.label}</span>
                         </div>
                         <div className="h-1.5 bg-gray-200 dark:bg-dark-600 rounded-full overflow-hidden">
@@ -276,11 +283,20 @@ export default function LoginModal() {
               </div>
             </div>
           </motion.div>
+          </div>
         </div>
       )}
     </AnimatePresence>
   );
 
   if (!mounted) return null;
-  return createPortal(modalContent, document.body);
+  return (
+    <>
+      {createPortal(modalContent, document.body)}
+      <FullScreenLoader
+        isVisible={isLoading}
+        message={isRegister ? 'Creating your account...' : 'Signing you in...'}
+      />
+    </>
+  );
 }

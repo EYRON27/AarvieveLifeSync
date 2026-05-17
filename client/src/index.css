@@ -60,8 +60,16 @@
     @apply bg-gradient-to-r from-accent-500 to-accent-700;
   }
 
+  .gradient-warm {
+    background: linear-gradient(to right, #f97316, #ef4444);
+  }
+
+  .gradient-vibrant {
+    background: linear-gradient(to right, #10b981, #06b6d4, #eab308);
+  }
+
   .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-accent-500;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-400 to-accent-400;
   }
 
   .btn-primary {
@@ -118,7 +126,7 @@
   }
 
   .badge-success {
-    @apply badge bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400;
+    @apply badge bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400;
   }
 
   .badge-warning {
@@ -126,11 +134,11 @@
   }
 
   .badge-danger {
-    @apply badge bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400;
+    @apply badge bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400;
   }
 
   .badge-info {
-    @apply badge bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400;
+    @apply badge bg-accent-100 dark:bg-accent-900/30 text-accent-700 dark:text-accent-400;
   }
 
   .page-container {

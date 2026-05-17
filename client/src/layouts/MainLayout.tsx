@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import Sidebar from './Sidebar';
+import Sidebar, { SIDEBAR_W_OPEN, SIDEBAR_W_CLOSED } from './Sidebar';
 import Topbar from './Topbar';
 import { useUIStore } from '@/store/uiStore';
 
@@ -11,15 +11,13 @@ export default function MainLayout() {
     <div className="min-h-screen bg-gray-50 dark:bg-dark-800">
       <Sidebar />
 
+      {/* Content area shifts right by sidebar width — matches sidebar spring animation */}
       <motion.div
-        animate={{
-          marginLeft: sidebarOpen ? 280 : 0,
-        }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        animate={{ marginLeft: sidebarOpen ? SIDEBAR_W_OPEN : SIDEBAR_W_CLOSED }}
+        transition={{ type: 'spring', stiffness: 320, damping: 30 }}
         className="min-h-screen flex flex-col"
       >
         <Topbar />
-
         <main className="flex-1">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
