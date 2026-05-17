@@ -58,6 +58,7 @@ export default function TimeTrackerPage() {
     mutationFn: (data: any) => timeApi.createManual(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['time-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['time-summary'] });
       toast.success('Entry added!');
       setModalOpen(false);
     },
@@ -65,7 +66,11 @@ export default function TimeTrackerPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => timeApi.delete(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['time-entries'] }); toast.success('Deleted!'); },
+    onSuccess: () => { 
+      queryClient.invalidateQueries({ queryKey: ['time-entries'] }); 
+      queryClient.invalidateQueries({ queryKey: ['time-summary'] });
+      toast.success('Deleted!'); 
+    },
   });
 
   // Timer effect
@@ -185,12 +190,19 @@ export default function TimeTrackerPage() {
 
       {/* Manual Entry Modal */}
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Manual Time Entry">
-        <form onSubmit={(e) => { e.preventDefault(); manualMutation.mutate(form); }} className="space-y-4">
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          if (new Date(form.endTime) < new Date(form.startTime)) {
+            toast.error('End time cannot be earlier than start time');
+            return;
+          }
+          manualMutation.mutate(form);
+        }} className="space-y-4">
           <input type="text" placeholder="What did you work on?" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input-field" required />
           <input type="text" placeholder="Project" value={form.project} onChange={(e) => setForm({ ...form, project: e.target.value })} className="input-field" />
           <div className="grid grid-cols-2 gap-3">
-            <input type="datetime-local" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} className="input-field" required max={new Date().toISOString().slice(0, 16)} />
-            <input type="datetime-local" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className="input-field" required max={new Date().toISOString().slice(0, 16)} />
+            <input type="datetime-local" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} className="input-field" required />
+            <input type="datetime-local" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className="input-field" required />
           </div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
