@@ -92,7 +92,19 @@ export default function ExpensesPage() {
                 <Pie data={pieData} cx="50%" cy="50%" outerRadius={80} paddingAngle={3} dataKey="value">
                   {pieData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                 </Pie>
-                <Tooltip formatter={(v: number) => `$${v.toFixed(2)}`} contentStyle={{ backgroundColor: 'rgba(30,30,40,0.9)', border: 'none', borderRadius: '12px', color: '#fff' }} />
+                <Tooltip
+                  formatter={(v: number) => `$${v.toFixed(2)}`}
+                  contentStyle={{
+                    backgroundColor: 'rgba(15,15,25,0.95)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '12px',
+                    color: '#ffffff',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                  }}
+                  itemStyle={{ color: '#ffffff' }}
+                  labelStyle={{ color: '#94a3b8', marginBottom: 4 }}
+                />
               </PieChart>
             </ResponsiveContainer>
           ) : <div className="h-[200px] flex items-center justify-center text-gray-400">No data</div>}

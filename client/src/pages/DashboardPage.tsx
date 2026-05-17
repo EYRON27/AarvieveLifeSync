@@ -8,8 +8,9 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 import StatCard from '@/components/StatCard';
 import { PageLoader } from '@/components/LoadingSpinner';
 import { dashboardApi } from '@/services/endpoints';
+import { useAuthStore } from '@/store/authStore';
 
-const COLORS = ['#5c7cfa', '#f06595', '#51cf66', '#fcc419', '#ff922b', '#845ef7', '#22b8cf', '#ff6b6b'];
+const COLORS = ['#10b981', '#06b6d4', '#f59e0b', '#f97316', '#f43f5e', '#845ef7', '#22b8cf', '#ff6b6b'];
 
 const container = {
   hidden: { opacity: 0 },
@@ -22,6 +23,9 @@ const item = {
 };
 
 export default function DashboardPage() {
+  const { user } = useAuthStore();
+  const firstName = user?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
+
   const { data: statsRes, isLoading } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: () => dashboardApi.getStats(),
@@ -47,10 +51,10 @@ export default function DashboardPage() {
   const activity = activityRes || [];
 
   const taskChartData = [
-    { name: 'Todo', value: stats.tasks.total - stats.tasks.completed - stats.tasks.inProgress, fill: '#fcc419' },
-    { name: 'In Progress', value: stats.tasks.inProgress, fill: '#5c7cfa' },
-    { name: 'Completed', value: stats.tasks.completed, fill: '#51cf66' },
-    { name: 'Overdue', value: stats.tasks.overdue, fill: '#ff6b6b' },
+    { name: 'Todo', value: stats.tasks.total - stats.tasks.completed - stats.tasks.inProgress, fill: '#f59e0b' },
+    { name: 'In Progress', value: stats.tasks.inProgress, fill: '#06b6d4' },
+    { name: 'Completed', value: stats.tasks.completed, fill: '#10b981' },
+    { name: 'Overdue', value: stats.tasks.overdue, fill: '#f43f5e' },
   ].filter((d) => d.value > 0);
 
   const caloriePercent = Math.min(100, Math.round((stats.foodTracker.todayCalories / stats.foodTracker.calorieGoal) * 100));
@@ -64,7 +68,9 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-title">Dashboard</h1>
-          <p className="text-gray-500 dark:text-dark-200 mt-1">Welcome back! Here's your productivity overview.</p>
+          <p className="text-gray-500 dark:text-dark-200 mt-1">
+            Welcome back, <span className="font-semibold text-primary-400">{firstName}</span>! Here's your productivity overview.
+          </p>
         </div>
       </div>
 
@@ -81,7 +87,7 @@ export default function DashboardPage() {
             value={stats.tasks.total}
             subtitle={`${stats.tasks.completed} completed`}
             icon={<HiOutlineClipboardList className="w-6 h-6" />}
-            gradient="from-blue-500 to-blue-700"
+            gradient="from-primary-500 to-primary-700"
           />
         </motion.div>
         <motion.div variants={item}>
@@ -90,7 +96,7 @@ export default function DashboardPage() {
             value={`$${stats.expenses.monthTotal.toFixed(2)}`}
             subtitle={`Top: ${stats.expenses.topCategory}`}
             icon={<HiOutlineCurrencyDollar className="w-6 h-6" />}
-            gradient="from-emerald-500 to-emerald-700"
+            gradient="from-accent-500 to-accent-700"
           />
         </motion.div>
         <motion.div variants={item}>
@@ -99,7 +105,7 @@ export default function DashboardPage() {
             value={`${stats.timeTracker.weekHours}h`}
             subtitle={stats.timeTracker.activeTimer ? '🔴 Timer active' : `Top: ${stats.timeTracker.topProject}`}
             icon={<HiOutlineClock className="w-6 h-6" />}
-            gradient="from-violet-500 to-violet-700"
+            gradient="from-orange-500 to-orange-700"
           />
         </motion.div>
         <motion.div variants={item}>
@@ -201,8 +207,8 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="glass-card p-5 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-cyan-500/10">
-            <HiOutlineChartBar className="w-6 h-6 text-cyan-500" />
+          <div className="p-3 rounded-xl bg-accent-500/10">
+            <HiOutlineChartBar className="w-6 h-6 text-accent-500" />
           </div>
           <div>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.foodTracker.todayMeals}</p>
@@ -210,8 +216,8 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="glass-card p-5 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-violet-500/10">
-            <HiOutlineClock className="w-6 h-6 text-violet-500" />
+          <div className="p-3 rounded-xl bg-orange-500/10">
+            <HiOutlineClock className="w-6 h-6 text-orange-500" />
           </div>
           <div>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.timeTracker.todayHours}h</p>
