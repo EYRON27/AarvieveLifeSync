@@ -91,8 +91,8 @@ export default function ExpensesPage() {
   const expenses = data || [];
 
   const { pieData, totalExpenses, averageDaily, uniqueCategories } = useMemo(() => {
-    const filteredByCategory = expenses.filter(e => !selectedCategory || e.category === selectedCategory);
-    const total = filteredByCategory.reduce((sum, e) => sum + e.amount, 0);
+    const filteredByCategory = expenses.filter((e: any) => !selectedCategory || e.category === selectedCategory);
+    const total = filteredByCategory.reduce((sum: number, e: any) => sum + e.amount, 0);
     
     const byCategory = expenses.reduce((acc: any, e: any) => {
       acc[e.category] = (acc[e.category] || 0) + e.amount;
@@ -109,7 +109,7 @@ export default function ExpensesPage() {
     else if (timeRange === 'monthly') days = 30;
     else if (timeRange === 'yearly') days = 365;
     else if (timeRange === 'all' && expenses.length > 0) {
-      const oldest = expenses.reduce((min, e) => (e.date < min ? e.date : min), new Date().toISOString().split('T')[0]);
+      const oldest = expenses.reduce((min: string, e: any) => (e.date < min ? e.date : min), new Date().toISOString().split('T')[0]);
       days = Math.max(1, (new Date().getTime() - new Date(oldest).getTime()) / (1000 * 3600 * 24));
     }
     
@@ -117,7 +117,7 @@ export default function ExpensesPage() {
       pieData: chartData,
       totalExpenses: total,
       averageDaily: total / days,
-      uniqueCategories: Array.from(new Set([...defaultCategories, ...expenses.map(e => e.category)])),
+      uniqueCategories: Array.from(new Set([...defaultCategories, ...expenses.map((e: any) => e.category)])),
     };
   }, [expenses, selectedCategory, timeRange]);
 
@@ -202,7 +202,7 @@ export default function ExpensesPage() {
       ) : (
         <div className="space-y-3">
           <AnimatePresence>
-            {expenses.filter(e => !selectedCategory || e.category === selectedCategory).map((exp: any) => (
+            {expenses.filter((e: any) => !selectedCategory || e.category === selectedCategory).map((exp: any) => (
               <motion.div key={exp.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="glass-card-hover p-4">
                 <div className="flex items-center gap-4">
                   <span className="text-2xl">{categoryEmoji[exp.category] || '🏷️'}</span>
@@ -218,7 +218,7 @@ export default function ExpensesPage() {
                 </div>
               </motion.div>
             ))}
-            {expenses.filter(e => !selectedCategory || e.category === selectedCategory).length === 0 && (
+            {expenses.filter((e: any) => !selectedCategory || e.category === selectedCategory).length === 0 && (
               <div className="text-center p-8 text-gray-500">No expenses in this category for the selected period.</div>
             )}
           </AnimatePresence>
