@@ -4,11 +4,12 @@ import { userService } from '../services';
 export class AuthController {
   async syncUser(req: Request, res: Response, next: NextFunction) {
     try {
-      const { uid, email, displayName } = req.body;
+      const { uid, email, displayName, currency } = req.body;
       const user = await userService.getOrCreateUser(
         uid || req.userId!,
         email || req.userEmail!,
-        displayName || 'User'
+        displayName || 'User',
+        currency
       );
       res.json({ success: true, data: user });
     } catch (error) { next(error); }

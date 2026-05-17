@@ -189,8 +189,8 @@ export default function TimeTrackerPage() {
           <input type="text" placeholder="What did you work on?" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input-field" required />
           <input type="text" placeholder="Project" value={form.project} onChange={(e) => setForm({ ...form, project: e.target.value })} className="input-field" />
           <div className="grid grid-cols-2 gap-3">
-            <input type="datetime-local" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} className="input-field" required />
-            <input type="datetime-local" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className="input-field" required />
+            <input type="datetime-local" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} className="input-field" required max={new Date().toISOString().slice(0, 16)} />
+            <input type="datetime-local" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className="input-field" required max={new Date().toISOString().slice(0, 16)} />
           </div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancel</button>

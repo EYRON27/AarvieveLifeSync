@@ -47,7 +47,7 @@ export class DashboardService {
 
     const activities: RecentActivity[] = [
       ...tasks.map((t) => ({ id: t.id, type: 'task' as const, action: 'created' as const, title: t.title, timestamp: t.createdAt })),
-      ...expenses.map((e) => ({ id: e.id, type: 'expense' as const, action: 'created' as const, title: `${e.title} - $${e.amount}`, timestamp: e.createdAt })),
+      ...expenses.map((e) => ({ id: e.id, type: 'expense' as const, action: 'created' as const, title: e.title, timestamp: e.createdAt, metadata: { amount: e.amount } })),
       ...timeEntries.map((t) => ({ id: t.id, type: 'time' as const, action: 'created' as const, title: `${t.title}`, timestamp: t.createdAt })),
       ...foodEntries.map((f) => ({ id: f.id, type: 'food' as const, action: 'created' as const, title: `${f.name} - ${f.calories} cal`, timestamp: f.createdAt })),
     ];

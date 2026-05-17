@@ -228,7 +228,7 @@ export default function TasksPage() {
               {statuses.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-          <input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} className="input-field" />
+          <input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} className="input-field" min={new Date().toISOString().split('T')[0]} />
           <input type="text" placeholder="Tags (comma separated)" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} className="input-field" />
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={closeModal} className="btn-secondary flex-1">Cancel</button>

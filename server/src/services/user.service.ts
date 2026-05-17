@@ -3,14 +3,14 @@ import { userRepository } from '../repositories';
 import { auth } from '../firebase';
 
 export class UserService {
-  async getOrCreateUser(uid: string, email: string, displayName: string): Promise<User> {
+  async getOrCreateUser(uid: string, email: string, displayName: string, currency?: string): Promise<User> {
     let user = await userRepository.findById(uid);
     if (!user) {
       const now = new Date().toISOString();
       user = await userRepository.create({
         uid, email, displayName,
         createdAt: now, updatedAt: now,
-        preferences: { theme: 'dark', currency: 'USD', timezone: 'UTC', dailyCalorieGoal: 2000, weeklyBudget: 500 },
+        preferences: { theme: 'dark', currency: currency || 'USD', timezone: 'UTC', dailyCalorieGoal: 2000, weeklyBudget: 500 },
       });
     }
     return user;
