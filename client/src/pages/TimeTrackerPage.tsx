@@ -11,6 +11,8 @@ import { timeApi } from '@/services/endpoints';
 export default function TimeTrackerPage() {
   const [elapsed, setElapsed] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
+  const [startTimerModalOpen, setStartTimerModalOpen] = useState(false);
+  const [startTimerForm, setStartTimerForm] = useState({ title: '', project: '' });
   const [form, setForm] = useState({ title: '', project: '', description: '', startTime: '', endTime: '' });
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const queryClient = useQueryClient();
@@ -93,11 +95,19 @@ export default function TimeTrackerPage() {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const handleStartTimer = () => {
-    const title = prompt('What are you working on?');
-    if (!title) return;
-    const project = prompt('Project name (optional)') || 'General';
-    startMutation.mutate({ title, project });
+  const openStartTimerModal = () => {
+    setStartTimerForm({ title: '', project: '' });
+    setStartTimerModalOpen(true);
+  };
+
+  const handleStartTimerSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!startTimerForm.title) return;
+    startMutation.mutate({ 
+      title: startTimerForm.title, 
+      project: startTimerForm.project || 'General' 
+    });
+    setStartTimerModalOpen(false);
   };
 
   if (isLoading) return <PageLoader />;
@@ -127,7 +137,7 @@ export default function TimeTrackerPage() {
               <HiOutlineStop className="w-5 h-5" /> Stop Timer
             </button>
           ) : (
-            <button onClick={handleStartTimer}
+            <button onClick={openStartTimerModal}
               className="btn-primary inline-flex items-center gap-2 px-8 py-3">
               <HiOutlinePlay className="w-5 h-5" /> Start Timer
             </button>
@@ -207,6 +217,31 @@ export default function TimeTrackerPage() {
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" className="btn-primary flex-1">Add Entry</button>
+          </div>
+        </form>
+      </Modal>
+      {/* Start Timer Modal */}
+      <Modal isOpen={startTimerModalOpen} onClose={() => setStartTimerModalOpen(false)} title="Start Timer">
+        <form onSubmit={handleStartTimerSubmit} className="space-y-4">
+          <input 
+            type="text" 
+            placeholder="What are you working on?" 
+            value={startTimerForm.title} 
+            onChange={(e) => setStartTimerForm({ ...startTimerForm, title: e.target.value })} 
+            className="input-field" 
+            required 
+            autoFocus
+          />
+          <input 
+            type="text" 
+            placeholder="Project name (optional)" 
+            value={startTimerForm.project} 
+            onChange={(e) => setStartTimerForm({ ...startTimerForm, project: e.target.value })} 
+            className="input-field" 
+          />
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={() => setStartTimerModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
+            <button type="submit" className="btn-primary flex-1">Start</button>
           </div>
         </form>
       </Modal>
