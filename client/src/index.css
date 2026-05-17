@@ -157,4 +157,13 @@
   .section-title {
     @apply text-xl font-display font-semibold text-gray-800 dark:text-dark-50;
   }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }

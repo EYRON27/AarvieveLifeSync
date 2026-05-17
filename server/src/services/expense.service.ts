@@ -20,6 +20,12 @@ export class ExpenseService {
     if (filters.category) {
       queryFilters.push({ field: 'category', operator: '==', value: filters.category });
     }
+    if (filters.dateFrom) {
+      queryFilters.push({ field: 'date', operator: '>=', value: filters.dateFrom });
+    }
+    if (filters.dateTo) {
+      queryFilters.push({ field: 'date', operator: '<=', value: filters.dateTo });
+    }
 
     const { data, total } = await expenseRepository.findByUserId(userId, {
       orderBy: filters.sortBy || 'date',
@@ -74,10 +80,7 @@ export class ExpenseService {
     const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
     const byCategory = {} as Record<ExpenseCategory, number>;
 
-    const categories: ExpenseCategory[] = [
-      'food', 'transport', 'housing', 'utilities', 'entertainment',
-      'healthcare', 'education', 'shopping', 'personal', 'other',
-    ];
+    const categories = Array.from(new Set(expenses.map(e => e.category)));
     for (const cat of categories) {
       byCategory[cat] = expenses.filter((e) => e.category === cat).reduce((s, e) => s + e.amount, 0);
     }

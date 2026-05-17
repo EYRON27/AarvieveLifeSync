@@ -34,7 +34,7 @@ export interface RegisterCredentials extends AuthCredentials {
 // ============================================================
 
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
-export type TaskStatus = 'todo' | 'in-progress' | 'completed' | 'cancelled';
+export type TaskStatus = 'todo' | 'in-progress' | 'completed' | 'overdue';
 
 export interface Task {
   id: string;
@@ -64,17 +64,7 @@ export interface UpdateTaskDTO extends Partial<CreateTaskDTO> {}
 // Expense Types
 // ============================================================
 
-export type ExpenseCategory =
-  | 'food'
-  | 'transport'
-  | 'housing'
-  | 'utilities'
-  | 'entertainment'
-  | 'healthcare'
-  | 'education'
-  | 'shopping'
-  | 'personal'
-  | 'other';
+export type ExpenseCategory = string;
 
 export interface Expense {
   id: string;
