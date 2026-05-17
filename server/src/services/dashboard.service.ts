@@ -28,10 +28,13 @@ export class DashboardService {
       if (h > maxH) { maxH = h; topProject = proj; }
     }
 
+    const todayIndex = new Date().getDay();
+    const todayHours = timeSummary.weeklyTrend[todayIndex]?.hours || 0;
+
     return {
       tasks: { total: taskStats.total, completed: taskStats.completed, overdue: taskStats.overdue, inProgress: taskStats.inProgress },
       expenses: { monthTotal: expenseSummary.totalExpenses, weekTotal: 0, todayTotal: 0, topCategory },
-      timeTracker: { todayHours: 0, weekHours: timeSummary.totalHours, activeTimer: !!runningTimer, topProject },
+      timeTracker: { todayHours, weekHours: timeSummary.totalHours, activeTimer: !!runningTimer, topProject },
       foodTracker: { todayCalories: foodSummary.totalCalories, calorieGoal: 2000, todayMeals: Object.values(foodSummary.byMealType).reduce((s, m) => s + m.count, 0) },
       passwords: { totalEntries: passwordTotal },
     };

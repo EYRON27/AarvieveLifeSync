@@ -88,8 +88,8 @@ export const createTimeEntrySchema = z.object({
   title: z.string().min(1, 'Title is required').max(200),
   description: z.string().max(1000).optional().default(''),
   project: z.string().max(200).optional().default('General'),
-  startTime: z.string().optional().superRefine((val, ctx) => { if (val) noFutureDate(val, ctx); }),
-  endTime: z.string().optional().superRefine((val, ctx) => { if (val) noFutureDate(val, ctx); }),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
   tags: z.array(z.string()).optional().default([]),
 });
 
