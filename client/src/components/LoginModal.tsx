@@ -2,11 +2,14 @@ import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HiOutlineMail, HiOutlineLockClosed, HiOutlineUser, HiOutlineX, HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi';
+import { HiOutlineMail, HiOutlineLockClosed, HiOutlineUser, HiOutlineX, HiOutlineEye, HiOutlineEyeOff, HiOutlineCurrencyDollar } from 'react-icons/hi';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { FullScreenLoader } from '@/components/LoadingSpinner';
+import { CURRENCIES } from '@/utils/currency';
 import toast from 'react-hot-toast';
+
+
 
 function getPasswordStrength(password: string) {
   let score = 0;
@@ -26,7 +29,9 @@ export default function LoginModal() {
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [currency, setCurrency] = useState('PHP');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const passwordStrength = useMemo(() => getPasswordStrength(password), [password]);
@@ -40,7 +45,9 @@ export default function LoginModal() {
     setIsRegister(false);
     setEmail('');
     setPassword('');
+    setConfirmPassword('');
     setDisplayName('');
+    setCurrency('PHP');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,7 +55,12 @@ export default function LoginModal() {
     setIsLoading(true);
     try {
       if (isRegister) {
-        await register(email, password, displayName);
+        if (password !== confirmPassword) {
+          toast.error('Passwords do not match. Please try again.');
+          setIsLoading(false);
+          return;
+        }
+        await register(email, password, displayName, currency);
         const name = displayName.split(' ')[0] || email.split('@')[0];
         toast.success(`Welcome, ${name}! Your account is ready 🎉`);
       } else {
@@ -247,6 +259,49 @@ export default function LoginModal() {
                       </div>
                     )}
                   </div>
+
+                  {isRegister && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Confirm Password</label>
+                      <div className="relative">
+                        <HiOutlineLockClosed className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="••••••••"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          className={`w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-dark-900 border ${
+                            confirmPassword && password !== confirmPassword 
+                              ? 'border-rose-500 focus:ring-rose-500/20' 
+                              : 'border-gray-200 dark:border-dark-600 focus:border-primary-500 focus:ring-primary-500/20'
+                          } text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-4 transition-all`}
+                          required
+                          minLength={6}
+                        />
+                      </div>
+                      {confirmPassword && password !== confirmPassword && (
+                        <p className="text-rose-500 text-xs mt-1.5 font-medium">Passwords do not match</p>
+                      )}
+                    </div>
+                  )}
+
+                  {isRegister && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Preferred Currency</label>
+                      <div className="relative">
+                        <HiOutlineCurrencyDollar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
+                        <select
+                          value={currency}
+                          onChange={(e) => setCurrency(e.target.value)}
+                          className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-200 dark:border-dark-600 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 transition-all appearance-none"
+                        >
+                          {CURRENCIES.map((c) => (
+                            <option key={c.code} value={c.code}>{c.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
 
                   {!isRegister && (
                     <div className="flex justify-end mt-1">

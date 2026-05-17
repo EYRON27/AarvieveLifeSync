@@ -7,6 +7,8 @@ import toast from 'react-hot-toast';
 import Modal from '@/components/Modal';
 import { PageLoader, EmptyState } from '@/components/LoadingSpinner';
 import { expenseApi } from '@/services/endpoints';
+import { useAuthStore } from '@/store/authStore';
+import { formatCurrency } from '@/utils/currency';
 
 const categories = ['food','transport','housing','utilities','entertainment','healthcare','education','shopping','personal','other'];
 const categoryEmoji: Record<string, string> = {
@@ -22,6 +24,8 @@ export default function ExpensesPage() {
   const [form, setForm] = useState({ title: '', amount: '', category: 'food', date: new Date().toISOString().split('T')[0], notes: '' });
 
   const queryClient = useQueryClient();
+  const { dbUser } = useAuthStore();
+  const currency = dbUser?.preferences?.currency || 'USD';
 
   const { data, isLoading } = useQuery({
     queryKey: ['expenses', search],
@@ -81,8 +85,8 @@ export default function ExpensesPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="glass-card p-6 lg:col-span-1">
           <h3 className="section-title mb-2">Monthly Total</h3>
-          <p className="text-4xl font-display font-bold gradient-text">${(summary?.totalExpenses || 0).toFixed(2)}</p>
-          <p className="text-sm text-gray-500 dark:text-dark-200 mt-1">Avg ${(summary?.averageDaily || 0).toFixed(2)}/day</p>
+          <p className="text-4xl font-display font-bold gradient-text">{formatCurrency(summary?.totalExpenses || 0, currency)}</p>
+          <p className="text-sm text-gray-500 dark:text-dark-200 mt-1">Avg {formatCurrency(summary?.averageDaily || 0, currency)}/day</p>
         </div>
         <div className="glass-card p-6 lg:col-span-2">
           <h3 className="section-title mb-4">By Category</h3>
@@ -93,7 +97,7 @@ export default function ExpensesPage() {
                   {pieData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                 </Pie>
                 <Tooltip
-                  formatter={(v: number) => `$${v.toFixed(2)}`}
+                  formatter={(v: number) => formatCurrency(v, currency)}
                   contentStyle={{
                     backgroundColor: 'rgba(15,15,25,0.95)',
                     border: '1px solid rgba(255,255,255,0.1)',
@@ -131,7 +135,7 @@ export default function ExpensesPage() {
                     <h3 className="font-semibold text-gray-900 dark:text-white">{exp.title}</h3>
                     <p className="text-sm text-gray-500 dark:text-dark-200">{exp.category} · {exp.date}</p>
                   </div>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">${exp.amount.toFixed(2)}</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">{formatCurrency(exp.amount, currency)}</p>
                   <div className="flex gap-1">
                     <button onClick={() => openEdit(exp)} className="btn-ghost p-2"><HiOutlinePencil className="w-4 h-4" /></button>
                     <button onClick={() => deleteMutation.mutate(exp.id)} className="btn-ghost p-2 text-red-500"><HiOutlineTrash className="w-4 h-4" /></button>
@@ -151,7 +155,7 @@ export default function ExpensesPage() {
           <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="input-field">
             {categories.map((c) => <option key={c} value={c}>{categoryEmoji[c]} {c}</option>)}
           </select>
-          <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="input-field" required />
+          <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="input-field" required max={new Date().toISOString().split('T')[0]} />
           <textarea placeholder="Notes (optional)" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="input-field min-h-[60px] resize-none" />
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={closeModal} className="btn-secondary flex-1">Cancel</button>

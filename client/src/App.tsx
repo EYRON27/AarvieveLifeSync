@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { RouterProvider } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, MutationCache } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { router } from './routes';
 import { useAuthStore } from './store/authStore';
@@ -14,6 +14,13 @@ const queryClient = new QueryClient({
       staleTime: 5 * 60 * 1000, // 5 minutes
     },
   },
+  mutationCache: new MutationCache({
+    onSuccess: () => {
+      // Globally invalidate dashboard queries on any successful mutation
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-activity'] });
+    },
+  }),
 });
 
 function AppInitializer({ children }: { children: React.ReactNode }) {
@@ -30,6 +37,12 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
     const unsubscribe = initializeAuth();
     return unsubscribe;
   }, [initializeAuth]);
+
+  useEffect(() => {
+    if (!useAuthStore.getState().isAuthenticated) {
+      queryClient.clear();
+    }
+  }, [useAuthStore(state => state.isAuthenticated)]);
 
   return <>{children}</>;
 }

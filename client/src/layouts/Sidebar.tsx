@@ -33,7 +33,7 @@ export const SIDEBAR_W_OPEN = 260;
 export const SIDEBAR_W_CLOSED = 68;
 
 export default function Sidebar() {
-  const { user, logout } = useAuthStore();
+  const { user, dbUser, logout } = useAuthStore();
   const { sidebarOpen, toggleSidebar, setSidebarOpen } = useUIStore();
   const navigate = useNavigate();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -182,12 +182,12 @@ export default function Sidebar() {
               >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center shadow-md flex-shrink-0">
                   <span className="text-white font-semibold text-xs">
-                    {user?.displayName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
+                    {(dbUser?.displayName || user?.displayName)?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
                   </span>
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-gray-900 dark:text-white truncate leading-tight">
-                    {user?.displayName || 'User'}
+                    {dbUser?.displayName || user?.displayName || 'User'}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-dark-200 truncate">
                     {user?.email}

@@ -1,21 +1,41 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { HiOutlineCog, HiOutlineUser, HiOutlineMoon, HiOutlineSun } from 'react-icons/hi';
+import { HiOutlineCog, HiOutlineUser, HiOutlineMoon, HiOutlineSun, HiOutlineCurrencyDollar } from 'react-icons/hi';
 import toast from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
 import { authApi } from '@/services/endpoints';
+import { CURRENCIES } from '@/utils/currency';
+import { updateProfile } from 'firebase/auth';
+import { firebaseAuth } from '@/services/firebase';
 
 export default function SettingsPage() {
-  const { user } = useAuthStore();
+  const { user, dbUser, setDbUser, setUser } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
-  const [displayName, setDisplayName] = useState(user?.displayName || '');
+  const queryClient = useQueryClient();
+  const [displayName, setDisplayName] = useState(dbUser?.displayName || user?.displayName || '');
+  const [currency, setCurrency] = useState(dbUser?.preferences?.currency || 'USD');
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await authApi.updateProfile({ displayName });
+      // Update backend
+      const preferences = { ...dbUser?.preferences, currency };
+      const res = await authApi.updateProfile({ displayName, preferences });
+      setDbUser(res.data.data);
+      
+      // Update Firebase Auth profile
+      if (firebaseAuth.currentUser) {
+        await updateProfile(firebaseAuth.currentUser, { displayName });
+        // Force Zustand update to trigger UI re-render with a cloned reference
+        setUser({ ...firebaseAuth.currentUser } as any);
+      }
+      
+      // Invalidate queries that might depend on currency
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-activity'] });
       toast.success('Profile updated!');
     } catch {
       toast.error('Failed to update');
@@ -42,11 +62,11 @@ export default function SettingsPage() {
           <div className="flex items-center gap-4 mb-6">
             <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center">
               <span className="text-white font-bold text-2xl">
-                {user?.displayName?.[0]?.toUpperCase() || 'U'}
+                {(dbUser?.displayName || user?.displayName)?.[0]?.toUpperCase() || 'U'}
               </span>
             </div>
             <div>
-              <p className="font-semibold text-gray-900 dark:text-white">{user?.displayName || 'User'}</p>
+              <p className="font-semibold text-gray-900 dark:text-white">{dbUser?.displayName || user?.displayName || 'User'}</p>
               <p className="text-sm text-gray-500 dark:text-dark-200">{user?.email}</p>
             </div>
           </div>
@@ -60,6 +80,23 @@ export default function SettingsPage() {
               <label className="text-sm font-medium text-gray-700 dark:text-dark-100 mb-1 block">Email</label>
               <input type="email" value={user?.email || ''} disabled className="input-field opacity-60" />
             </div>
+            
+            <div>
+              <label className="text-sm font-medium text-gray-700 dark:text-dark-100 mb-1 block">Preferred Currency</label>
+              <div className="relative">
+                <HiOutlineCurrencyDollar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-200 dark:border-dark-600 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all appearance-none"
+                >
+                  {CURRENCIES.map((c) => (
+                    <option key={c.code} value={c.code}>{c.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <button onClick={handleSave} disabled={saving} className="btn-primary">
               {saving ? 'Saving...' : 'Save Changes'}
             </button>

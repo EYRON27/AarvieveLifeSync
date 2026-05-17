@@ -147,23 +147,8 @@ export default function PasswordVaultPage() {
           <div>
             <div className="relative">
               <HiOutlineLockClosed className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input type="password" placeholder="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="input-field pl-12" required minLength={8} />
+              <input type="password" placeholder="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="input-field pl-12" required />
             </div>
-            {form.password.length > 0 && (
-              <div className="mt-2 space-y-1">
-                {[
-                  { test: form.password.length >= 8, label: 'At least 8 characters' },
-                  { test: /[A-Z]/.test(form.password), label: 'One uppercase letter' },
-                  { test: /[a-z]/.test(form.password), label: 'One lowercase letter' },
-                  { test: /[0-9]/.test(form.password), label: 'One number' },
-                  { test: /[^A-Za-z0-9]/.test(form.password), label: 'One special character (!@#$%^&*)' },
-                ].map((rule, i) => (
-                  <div key={i} className={`text-xs flex items-center gap-1.5 ${rule.test ? 'text-green-500' : 'text-gray-400 dark:text-dark-200'}`}>
-                    <span>{rule.test ? '✓' : '○'}</span> {rule.label}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
           <div className="relative">
             <HiOutlineGlobe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />

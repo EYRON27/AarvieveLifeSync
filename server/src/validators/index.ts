@@ -1,5 +1,27 @@
 import { z } from 'zod';
 
+// Helper: reject future dates (allows today)
+const noFutureDate = (val: string, ctx: z.RefinementCtx) => {
+  const input = new Date(val);
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(0, 0, 0, 0);
+  if (input >= tomorrow) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Date cannot be in the future' });
+  }
+};
+
+// Helper: reject past dates (allows today)
+const noPastDate = (val: string, ctx: z.RefinementCtx) => {
+  if (!val) return;
+  const input = new Date(val);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (input < today) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Date cannot be in the past' });
+  }
+};
+
 // ============================================================
 // Task Validators
 // ============================================================
@@ -9,7 +31,7 @@ export const createTaskSchema = z.object({
   description: z.string().max(2000).optional().default(''),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional().default('medium'),
   status: z.enum(['todo', 'in-progress', 'completed', 'cancelled']).optional().default('todo'),
-  dueDate: z.string().nullable().optional().default(null),
+  dueDate: z.string().nullable().optional().default(null).superRefine((val, ctx) => { if (val) noPastDate(val, ctx); }),
   tags: z.array(z.string()).optional().default([]),
 });
 
@@ -34,7 +56,7 @@ export const createExpenseSchema = z.object({
     'personal',
     'other',
   ]),
-  date: z.string().min(1, 'Date is required'),
+  date: z.string().min(1, 'Date is required').superRefine(noFutureDate),
   notes: z.string().max(1000).optional().default(''),
 });
 
@@ -47,12 +69,7 @@ export const updateExpenseSchema = createExpenseSchema.partial();
 export const createPasswordSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200),
   username: z.string().min(1, 'Username is required').max(200),
-  password: z.string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one number')
-    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character (!@#$%^&*)'),
+  password: z.string().min(1, 'Password is required'),
   website: z.string().max(500).optional().default(''),
   category: z
     .enum(['social', 'email', 'banking', 'work', 'entertainment', 'shopping', 'development', 'other'])
@@ -71,8 +88,8 @@ export const createTimeEntrySchema = z.object({
   title: z.string().min(1, 'Title is required').max(200),
   description: z.string().max(1000).optional().default(''),
   project: z.string().max(200).optional().default('General'),
-  startTime: z.string().optional(),
-  endTime: z.string().optional(),
+  startTime: z.string().optional().superRefine((val, ctx) => { if (val) noFutureDate(val, ctx); }),
+  endTime: z.string().optional().superRefine((val, ctx) => { if (val) noFutureDate(val, ctx); }),
   tags: z.array(z.string()).optional().default([]),
 });
 
@@ -97,7 +114,7 @@ export const createFoodEntrySchema = z.object({
   carbs: z.number().min(0).optional().default(0),
   fat: z.number().min(0).optional().default(0),
   mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
-  date: z.string().min(1, 'Date is required'),
+  date: z.string().min(1, 'Date is required').superRefine(noFutureDate),
   notes: z.string().max(1000).optional().default(''),
 });
 

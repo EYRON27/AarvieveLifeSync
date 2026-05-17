@@ -9,6 +9,7 @@ import StatCard from '@/components/StatCard';
 import { PageLoader } from '@/components/LoadingSpinner';
 import { dashboardApi } from '@/services/endpoints';
 import { useAuthStore } from '@/store/authStore';
+import { formatCurrency, CURRENCY_SYMBOLS } from '@/utils/currency';
 
 const COLORS = ['#10b981', '#06b6d4', '#f59e0b', '#f97316', '#f43f5e', '#845ef7', '#22b8cf', '#ff6b6b'];
 
@@ -23,8 +24,9 @@ const item = {
 };
 
 export default function DashboardPage() {
-  const { user } = useAuthStore();
-  const firstName = user?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
+  const { user, dbUser } = useAuthStore();
+  const firstName = (dbUser?.displayName || user?.displayName)?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
+  const currency = dbUser?.preferences?.currency || 'USD';
 
   const { data: statsRes, isLoading } = useQuery({
     queryKey: ['dashboard-stats'],
@@ -93,7 +95,7 @@ export default function DashboardPage() {
         <motion.div variants={item}>
           <StatCard
             title="Monthly Expenses"
-            value={`$${stats.expenses.monthTotal.toFixed(2)}`}
+            value={formatCurrency(stats.expenses.monthTotal, currency)}
             subtitle={`Top: ${stats.expenses.topCategory}`}
             icon={<HiOutlineCurrencyDollar className="w-6 h-6" />}
             gradient="from-accent-500 to-accent-700"
@@ -182,7 +184,9 @@ export default function DashboardPage() {
               <div key={a.id} className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-dark-500/50 transition-colors">
                 <span className="text-xl">{typeIcons[a.type] || '📌'}</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{a.title}</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    {a.title} {a.metadata?.amount ? `- ${formatCurrency(a.metadata.amount as number, currency)}` : ''}
+                  </p>
                   <p className="text-xs text-gray-400 dark:text-dark-200">
                     {new Date(a.timestamp).toLocaleDateString()} · {a.action}
                   </p>

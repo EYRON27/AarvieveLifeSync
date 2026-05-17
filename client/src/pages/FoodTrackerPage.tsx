@@ -77,7 +77,7 @@ export default function FoodTrackerPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calorie Ring */}
         <div className="glass-card p-6 text-center">
-          <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="input-field mb-4 text-center" />
+          <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="input-field mb-4 text-center" max={new Date().toISOString().split('T')[0]} />
           <div className="relative w-40 h-40 mx-auto">
             <svg className="w-40 h-40 transform -rotate-90" viewBox="0 0 160 160">
               <circle cx="80" cy="80" r="70" strokeWidth="12" stroke="currentColor" fill="none" className="text-gray-200 dark:text-dark-500" />
@@ -175,7 +175,7 @@ export default function FoodTrackerPage() {
             <input type="number" placeholder="Carbs (g)" value={form.carbs} onChange={(e) => setForm({ ...form, carbs: e.target.value })} className="input-field" step="0.1" min="0" />
             <input type="number" placeholder="Fat (g)" value={form.fat} onChange={(e) => setForm({ ...form, fat: e.target.value })} className="input-field" step="0.1" min="0" />
           </div>
-          <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="input-field" required />
+          <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="input-field" required max={new Date().toISOString().split('T')[0]} />
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" className="btn-primary flex-1">Log Meal</button>

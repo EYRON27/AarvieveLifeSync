@@ -14,20 +14,23 @@ import { authApi } from '@/services/endpoints';
 
 interface AuthState {
   user: FirebaseUser | null;
+  dbUser: any | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, displayName: string) => Promise<void>;
+  register: (email: string, password: string, displayName: string, currency?: string) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   setUser: (user: FirebaseUser | null) => void;
   clearError: () => void;
   initializeAuth: () => () => void;
+  setDbUser: (user: any) => void;
 }
 
 export const useAuthStore = create<AuthState>()((set) => ({
   user: null,
+  dbUser: null,
   isLoading: true,
   isAuthenticated: false,
   error: null,
@@ -37,11 +40,12 @@ export const useAuthStore = create<AuthState>()((set) => ({
       set({ isLoading: true, error: null });
       const cred = await signInWithEmailAndPassword(firebaseAuth, email, password);
       try {
-        await authApi.syncUser({
+        const res = await authApi.syncUser({
           uid: cred.user.uid,
           email: cred.user.email,
           displayName: cred.user.displayName,
         });
+        set({ dbUser: res.data.data });
       } catch {
         // Backend sync failed, but Firebase auth succeeded — continue
       }
@@ -52,13 +56,26 @@ export const useAuthStore = create<AuthState>()((set) => ({
     }
   },
 
-  register: async (email, password, displayName) => {
+  register: async (email, password, displayName, currency) => {
     try {
       set({ isLoading: true, error: null });
       const cred = await createUserWithEmailAndPassword(firebaseAuth, email, password);
       await updateProfile(cred.user, { displayName });
       try {
-        await authApi.syncUser({ uid: cred.user.uid, email, displayName });
+        let res = await authApi.syncUser({ uid: cred.user.uid, email, displayName, currency: currency || 'USD' });
+        
+        // Race condition fix: If onAuthStateChanged created the user first without currency or displayName, update it now
+        const needsCurrencyUpdate = currency && res.data.data.preferences?.currency !== currency;
+        const needsNameUpdate = displayName && res.data.data.displayName !== displayName;
+        
+        if (needsCurrencyUpdate || needsNameUpdate) {
+          res = await authApi.updateProfile({ 
+            displayName: displayName || res.data.data.displayName,
+            preferences: { ...res.data.data.preferences, currency: currency || res.data.data.preferences?.currency } 
+          });
+        }
+        
+        set({ dbUser: res.data.data });
       } catch {
         // Backend sync failed, but Firebase auth succeeded — continue
       }
@@ -71,7 +88,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
   logout: async () => {
     await signOut(firebaseAuth);
-    set({ user: null, isAuthenticated: false });
+    set({ user: null, dbUser: null, isAuthenticated: false });
   },
 
   resetPassword: async (email) => {
@@ -94,11 +111,12 @@ export const useAuthStore = create<AuthState>()((set) => ({
     const unsubscribe = onAuthStateChanged(firebaseAuth, async (user) => {
       if (user) {
         try {
-          await authApi.syncUser({
+          const res = await authApi.syncUser({
             uid: user.uid,
             email: user.email,
             displayName: user.displayName,
           });
+          set({ dbUser: res.data.data });
         } catch {
           // Backend may be unreachable during dev
         }
@@ -107,4 +125,6 @@ export const useAuthStore = create<AuthState>()((set) => ({
     });
     return unsubscribe;
   },
+
+  setDbUser: (user) => set({ dbUser: user }),
 }));
