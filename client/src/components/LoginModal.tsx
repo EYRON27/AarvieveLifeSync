@@ -9,8 +9,6 @@ import { FullScreenLoader } from '@/components/LoadingSpinner';
 import { CURRENCIES } from '@/utils/currency';
 import toast from 'react-hot-toast';
 
-
-
 function getPasswordStrength(password: string) {
   let score = 0;
   if (password.length >= 6) score++;
@@ -18,11 +16,11 @@ function getPasswordStrength(password: string) {
   if (/[A-Z]/.test(password)) score++;
   if (/[0-9]/.test(password)) score++;
   if (/[^A-Za-z0-9]/.test(password)) score++;
-  if (score <= 1) return { label: 'Weak', color: 'bg-rose-500', width: '20%' };
-  if (score <= 2) return { label: 'Fair', color: 'bg-orange-500', width: '40%' };
-  if (score <= 3) return { label: 'Good', color: 'bg-amber-500', width: '60%' };
-  if (score <= 4) return { label: 'Strong', color: 'bg-primary-500', width: '80%' };
-  return { label: 'Very Strong', color: 'bg-primary-400', width: '100%' };
+  if (score <= 1) return { label: 'Weak', color: '#f43f5e', width: '20%' };
+  if (score <= 2) return { label: 'Fair', color: '#f97316', width: '40%' };
+  if (score <= 3) return { label: 'Good', color: '#f59e0b', width: '60%' };
+  if (score <= 4) return { label: 'Strong', color: '#5c7cfa', width: '80%' };
+  return { label: 'Very Strong', color: '#22b8cf', width: '100%' };
 }
 
 export default function LoginModal() {
@@ -36,18 +34,26 @@ export default function LoginModal() {
   const [showPassword, setShowPassword] = useState(false);
   const passwordStrength = useMemo(() => getPasswordStrength(password), [password]);
   
-  const { login, register, resetPassword, user } = useAuthStore();
-  const { isLoginModalOpen, setLoginModalOpen } = useUIStore();
+  const { login, register, resetPassword } = useAuthStore();
+  const { isLoginModalOpen, setLoginModalOpen, loginModalMode } = useUIStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isLoginModalOpen) {
+      setIsRegister(loginModalMode === 'register');
+    }
+  }, [isLoginModalOpen, loginModalMode]);
 
   const handleClose = () => {
     setLoginModalOpen(false);
-    setIsRegister(false);
-    setEmail('');
-    setPassword('');
-    setConfirmPassword('');
-    setDisplayName('');
-    setCurrency('PHP');
+    // don't immediately clear state so the closing animation looks clean
+    setTimeout(() => {
+      setEmail('');
+      setPassword('');
+      setConfirmPassword('');
+      setDisplayName('');
+      setCurrency('PHP');
+    }, 300);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -65,7 +71,6 @@ export default function LoginModal() {
         toast.success(`Welcome, ${name}! Your account is ready 🎉`);
       } else {
         await login(email, password);
-        // user is set in store after login resolves
         const storedUser = useAuthStore.getState().user;
         const name = storedUser?.displayName?.split(' ')[0] || storedUser?.email?.split('@')[0] || '';
         toast.success(name ? `Welcome back, ${name}! 👋` : 'Welcome back!');
@@ -90,8 +95,6 @@ export default function LoginModal() {
         errorMessage = 'Too many failed attempts. Please try again later.';
       } else if (code === 'auth/operation-not-allowed') {
         errorMessage = 'Email/Password sign-in is not enabled. Contact support.';
-      } else if (err.message && err.message.includes('502')) {
-        errorMessage = 'Unable to connect to the server. Please try again later.';
       }
       toast.error(errorMessage);
     } finally {
@@ -127,75 +130,74 @@ export default function LoginModal() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-md"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm"
             onClick={handleClose}
           />
 
-          {/* Scroll container — keeps modal above keyboard on mobile */}
           <div className="flex min-h-full items-center justify-center p-4 sm:p-6 py-8">
-          {/* Modal Container */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 30 }}
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 30 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="relative w-full max-w-4xl flex flex-col md:flex-row z-10 overflow-hidden rounded-[2rem] shadow-2xl border border-white/10 dark:border-dark-500/50"
+            className="relative w-full max-w-[900px] flex flex-col md:flex-row z-10 overflow-hidden rounded-2xl border border-white/[0.08] shadow-2xl"
+            style={{ background: '#0e0e1a' }}
           >
             {/* Left Side (Branding/Hero) */}
-            <div className="hidden md:flex md:w-5/12 relative flex-col justify-between p-10 bg-gradient-to-br from-primary-600 via-primary-700 to-dark-900 text-white overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-accent-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-              <div className="absolute bottom-0 left-0 w-64 h-64 bg-amber-400/15 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+            <div className="hidden md:flex md:w-[45%] relative flex-col justify-between p-10 border-r border-white/[0.05] overflow-hidden" style={{ background: '#080810' }}>
+              <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none" style={{ background: 'rgba(92,124,250,0.15)' }} />
+              <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2 pointer-events-none" style={{ background: 'rgba(34,184,207,0.1)' }} />
               
               <div className="relative z-10">
-                <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center mb-6 border border-white/20 shadow-lg">
-                  <span className="text-white font-bold text-2xl font-display">A</span>
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#5c7cfa] to-[#22b8cf] flex items-center justify-center mb-8 shadow-lg">
+                  <span className="text-white font-bold text-lg">A</span>
                 </div>
-                <h2 className="text-4xl font-display font-bold mb-4 leading-tight">
-                  {isRegister ? 'Join the\nProductivity\nRevolution.' : 'Welcome\nBack to\nLifeSync.'}
+                <h2 className="text-3xl font-bold mb-4 tracking-tight text-white">
+                  {isRegister ? 'Join the productivity revolution.' : 'Welcome back to LifeSync.'}
                 </h2>
-                <p className="text-primary-100 text-lg">
+                <p className="text-white/40 text-sm leading-relaxed">
                   {isRegister 
-                    ? 'Create your account to unlock all premium features and organize your daily life.' 
+                    ? 'Create your free account to unlock all premium features and master your day.' 
                     : 'We missed you! Log in to pick up right where you left off.'}
                 </p>
               </div>
 
               <div className="relative z-10">
-                <p className="text-sm text-primary-200">
-                  Built by <span className="text-white font-medium">Aaron M. Cañada</span>
+                <p className="text-xs text-white/30">
+                  Built by <span className="text-white/50 font-medium">Aaron M. Cañada</span>
                 </p>
               </div>
             </div>
 
             {/* Right Side (Form) */}
-            <div className="flex-1 p-8 sm:p-10 relative bg-white dark:bg-dark-800">
+            <div className="flex-1 p-8 sm:p-10 relative">
               <button
                 onClick={handleClose}
-                className="absolute top-6 right-6 p-2 rounded-full bg-gray-100 dark:bg-dark-600 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
+                className="absolute top-5 right-5 p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.05] transition-all"
               >
                 <HiOutlineX className="w-5 h-5" />
               </button>
 
-              <div className="max-w-sm mx-auto mt-4">
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 font-display">
+              <div className="max-w-sm mx-auto mt-2">
+                <h3 className="text-2xl font-bold text-white tracking-tight mb-2">
                   {isRegister ? 'Create Account' : 'Sign In'}
                 </h3>
-                <p className="text-gray-500 dark:text-gray-400 mb-8">
-                  {isRegister ? 'Fill in your details below to get started.' : 'Enter your email and password to access your dashboard.'}
+                <p className="text-white/40 text-sm mb-8">
+                  {isRegister ? 'Fill in your details below to get started.' : 'Enter your credentials to access your dashboard.'}
                 </p>
 
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form onSubmit={handleSubmit} className="space-y-4">
                   {isRegister && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Full Name</label>
+                      <label className="block text-xs font-semibold text-white/60 mb-1.5 uppercase tracking-wider">Full Name</label>
                       <div className="relative">
-                        <HiOutlineUser className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
+                        <HiOutlineUser className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                         <input
                           type="text"
-                          placeholder="e.g. Aaron M. Cañada"
+                          placeholder="Aaron M. Cañada"
                           value={displayName}
                           onChange={(e) => setDisplayName(e.target.value)}
-                          className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-200 dark:border-dark-600 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 transition-all"
+                          className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-black/20 border border-white/[0.08] text-white text-sm placeholder-white/20 focus:outline-none focus:border-[#5c7cfa] focus:bg-white/[0.02] transition-all"
                           required={isRegister}
                         />
                       </div>
@@ -203,57 +205,54 @@ export default function LoginModal() {
                   )}
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email Address</label>
+                    <label className="block text-xs font-semibold text-white/60 mb-1.5 uppercase tracking-wider">Email Address</label>
                     <div className="relative">
-                      <HiOutlineMail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
+                      <HiOutlineMail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                       <input
                         type="email"
                         placeholder="you@example.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-200 dark:border-dark-600 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 transition-all"
+                        className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-black/20 border border-white/[0.08] text-white text-sm placeholder-white/20 focus:outline-none focus:border-[#5c7cfa] focus:bg-white/[0.02] transition-all"
                         required
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Password</label>
+                    <label className="block text-xs font-semibold text-white/60 mb-1.5 uppercase tracking-wider">Password</label>
                     <div className="relative">
-                      <HiOutlineLockClosed className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
+                      <HiOutlineLockClosed className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                       <input
                         type={showPassword ? 'text' : 'password'}
                         placeholder="••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full pl-11 pr-12 py-3 rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-200 dark:border-dark-600 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 transition-all"
+                        className="w-full pl-10 pr-10 py-2.5 rounded-lg bg-black/20 border border-white/[0.08] text-white text-sm placeholder-white/20 focus:outline-none focus:border-[#5c7cfa] focus:bg-white/[0.02] transition-all"
                         required
                         minLength={6}
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
                         tabIndex={-1}
                       >
-                        {showPassword ? <HiOutlineEyeOff className="w-5 h-5" /> : <HiOutlineEye className="w-5 h-5" />}
+                        {showPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
                       </button>
                     </div>
                     {isRegister && password.length > 0 && (
-                      <div className="mt-2">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs text-gray-500 dark:text-gray-400">Password strength</span>
-                          <span className={`text-xs font-semibold ${
-                            passwordStrength.label === 'Weak' ? 'text-rose-500' :
-                            passwordStrength.label === 'Fair' ? 'text-orange-500' :
-                            passwordStrength.label === 'Good' ? 'text-amber-500' :
-                            'text-primary-500'
-                          }`}>{passwordStrength.label}</span>
+                      <div className="mt-2.5">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] text-white/40 uppercase tracking-wider">Strength</span>
+                          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: passwordStrength.color }}>
+                            {passwordStrength.label}
+                          </span>
                         </div>
-                        <div className="h-1.5 bg-gray-200 dark:bg-dark-600 rounded-full overflow-hidden">
+                        <div className="h-1 bg-white/[0.05] rounded-full overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all duration-300 ${passwordStrength.color}`}
-                            style={{ width: passwordStrength.width }}
+                            className="h-full rounded-full transition-all duration-300"
+                            style={{ width: passwordStrength.width, backgroundColor: passwordStrength.color }}
                           />
                         </div>
                       </div>
@@ -262,38 +261,35 @@ export default function LoginModal() {
 
                   {isRegister && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Confirm Password</label>
+                      <label className="block text-xs font-semibold text-white/60 mb-1.5 uppercase tracking-wider">Confirm Password</label>
                       <div className="relative">
-                        <HiOutlineLockClosed className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
+                        <HiOutlineLockClosed className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                         <input
                           type={showPassword ? 'text' : 'password'}
                           placeholder="••••••••"
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
-                          className={`w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-dark-900 border ${
+                          className={`w-full pl-10 pr-4 py-2.5 rounded-lg bg-black/20 border ${
                             confirmPassword && password !== confirmPassword 
-                              ? 'border-rose-500 focus:ring-rose-500/20' 
-                              : 'border-gray-200 dark:border-dark-600 focus:border-primary-500 focus:ring-primary-500/20'
-                          } text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-4 transition-all`}
+                              ? 'border-[#f43f5e]' 
+                              : 'border-white/[0.08] focus:border-[#5c7cfa]'
+                          } text-white text-sm placeholder-white/20 focus:outline-none focus:bg-white/[0.02] transition-all`}
                           required
                           minLength={6}
                         />
                       </div>
-                      {confirmPassword && password !== confirmPassword && (
-                        <p className="text-rose-500 text-xs mt-1.5 font-medium">Passwords do not match</p>
-                      )}
                     </div>
                   )}
 
                   {isRegister && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Preferred Currency</label>
+                      <label className="block text-xs font-semibold text-white/60 mb-1.5 uppercase tracking-wider">Currency</label>
                       <div className="relative">
-                        <HiOutlineCurrencyDollar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
+                        <HiOutlineCurrencyDollar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                         <select
                           value={currency}
                           onChange={(e) => setCurrency(e.target.value)}
-                          className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-200 dark:border-dark-600 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 transition-all appearance-none"
+                          className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-[#0e0e1a] border border-white/[0.08] text-white text-sm focus:outline-none focus:border-[#5c7cfa] focus:bg-white/[0.02] transition-all appearance-none"
                         >
                           {CURRENCIES.map((c) => (
                             <option key={c.code} value={c.code}>{c.label}</option>
@@ -308,9 +304,9 @@ export default function LoginModal() {
                       <button
                         type="button"
                         onClick={handleResetPassword}
-                        className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
+                        className="text-xs font-medium text-white/40 hover:text-white transition-colors"
                       >
-                        Forgot your password?
+                        Forgot password?
                       </button>
                     </div>
                   )}
@@ -318,20 +314,20 @@ export default function LoginModal() {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-3.5 mt-4 rounded-xl font-bold text-white bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-lg shadow-primary-500/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                    className="w-full py-3 mt-6 rounded-lg font-semibold text-sm text-[#080810] bg-white hover:bg-white/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
                   >
-                    {isLoading ? 'Please wait...' : isRegister ? 'Create My Account' : 'Sign In Now'}
+                    {isLoading ? 'Please wait...' : isRegister ? 'Create Account' : 'Sign In'}
                   </button>
                 </form>
 
-                <div className="mt-8 text-center">
-                  <p className="text-gray-500 dark:text-gray-400">
-                    {isRegister ? 'Already have an account? ' : "Don't have an account yet? "}
+                <div className="mt-8 text-center pt-6 border-t border-white/[0.05]">
+                  <p className="text-sm text-white/40">
+                    {isRegister ? 'Already have an account? ' : "Don't have an account? "}
                     <button
                       onClick={() => setIsRegister(!isRegister)}
-                      className="font-bold text-primary-600 dark:text-primary-400 hover:underline transition-all"
+                      className="font-semibold text-white hover:text-white/80 transition-colors"
                     >
-                      {isRegister ? 'Sign in here' : 'Sign up for free'}
+                      {isRegister ? 'Sign in' : 'Sign up'}
                     </button>
                   </p>
                 </div>

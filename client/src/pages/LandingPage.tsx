@@ -118,7 +118,7 @@ export default function LandingPage() {
             className="flex flex-col sm:flex-row items-center justify-center gap-3"
           >
             <button
-              onClick={() => setLoginModalOpen(true)}
+              onClick={() => setLoginModalOpen(true, 'register')}
               className="group inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-[#080810] bg-white hover:bg-white/90 transition-all duration-200 active:scale-95"
               id="hero-get-started"
             >
@@ -332,7 +332,7 @@ export default function LandingPage() {
             className="flex flex-col sm:flex-row items-center justify-center gap-3"
           >
             <button
-              onClick={() => setLoginModalOpen(true)}
+              onClick={() => setLoginModalOpen(true, 'register')}
               className="group inline-flex items-center gap-2 px-7 py-3.5 rounded-xl text-sm font-semibold text-[#080810] bg-white hover:bg-white/90 transition-all active:scale-95"
               id="cta-get-started"
             >

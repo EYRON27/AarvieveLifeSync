@@ -54,14 +54,14 @@ export default function PublicLayout() {
             {/* Right: Login + Mobile */}
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setLoginModalOpen(true)}
+                onClick={() => setLoginModalOpen(true, 'login')}
                 className="hidden md:flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium text-white bg-white/[0.08] hover:bg-white/[0.13] border border-white/[0.08] hover:border-white/[0.15] transition-all duration-200"
                 id="login-btn"
               >
                 Sign in
               </button>
               <button
-                onClick={() => setLoginModalOpen(true)}
+                onClick={() => setLoginModalOpen(true, 'register')}
                 className="hidden md:flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium text-[#080810] bg-white hover:bg-white/90 transition-all duration-200"
               >
                 Get started
@@ -122,13 +122,13 @@ export default function PublicLayout() {
               </nav>
               <div className="px-3 py-4 border-t border-white/[0.06] space-y-2">
                 <button
-                  onClick={() => { setMobileMenuOpen(false); setLoginModalOpen(true); }}
+                  onClick={() => { setMobileMenuOpen(false); setLoginModalOpen(true, 'login'); }}
                   className="w-full py-2.5 px-4 rounded-lg text-sm font-medium text-white bg-white/[0.08] hover:bg-white/[0.13] border border-white/[0.08] transition-all"
                 >
                   Sign in
                 </button>
                 <button
-                  onClick={() => { setMobileMenuOpen(false); setLoginModalOpen(true); }}
+                  onClick={() => { setMobileMenuOpen(false); setLoginModalOpen(true, 'register'); }}
                   className="w-full py-2.5 px-4 rounded-lg text-sm font-semibold text-[#080810] bg-white hover:bg-white/90 transition-all"
                 >
                   Get started free
