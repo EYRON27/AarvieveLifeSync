@@ -1,27 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
-import {
-  HiOutlineClipboardList, HiOutlineCurrencyDollar, HiOutlineClock,
-  HiOutlineHeart, HiOutlineKey, HiOutlineChartBar,
-} from 'react-icons/hi';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import StatCard from '@/components/StatCard';
 import { PageLoader } from '@/components/LoadingSpinner';
 import { dashboardApi } from '@/services/endpoints';
 import { useAuthStore } from '@/store/authStore';
-import { formatCurrency, CURRENCY_SYMBOLS } from '@/utils/currency';
-
-const COLORS = ['#10b981', '#06b6d4', '#f59e0b', '#f97316', '#f43f5e', '#845ef7', '#22b8cf', '#ff6b6b'];
-
-const container = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.1 } },
-};
-
-const item = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 },
-};
+import StatsGrid from '@/components/dashboard/StatsGrid';
+import TaskDistributionChart from '@/components/dashboard/TaskDistributionChart';
+import RecentActivityList from '@/components/dashboard/RecentActivityList';
+import QuickStatsBottom from '@/components/dashboard/QuickStatsBottom';
 
 export default function DashboardPage() {
   const { user, dbUser } = useAuthStore();
@@ -61,10 +45,6 @@ export default function DashboardPage() {
 
   const caloriePercent = Math.min(100, Math.round((stats.foodTracker.todayCalories / stats.foodTracker.calorieGoal) * 100));
 
-  const typeIcons: Record<string, string> = {
-    task: '📋', expense: '💰', time: '⏱️', food: '🍽️', password: '🔑',
-  };
-
   return (
     <div className="page-container">
       <div className="flex items-center justify-between">
@@ -76,159 +56,14 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <motion.div
-        variants={container}
-        initial="hidden"
-        animate="show"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-      >
-        <motion.div variants={item}>
-          <StatCard
-            title="Total Tasks"
-            value={stats.tasks.total}
-            subtitle={`${stats.tasks.completed} completed`}
-            icon={<HiOutlineClipboardList className="w-6 h-6" />}
-            gradient="from-primary-500 to-primary-700"
-          />
-        </motion.div>
-        <motion.div variants={item}>
-          <StatCard
-            title="Monthly Expenses"
-            value={formatCurrency(stats.expenses.monthTotal, currency)}
-            subtitle={`Top: ${stats.expenses.topCategory}`}
-            icon={<HiOutlineCurrencyDollar className="w-6 h-6" />}
-            gradient="from-accent-500 to-accent-700"
-          />
-        </motion.div>
-        <motion.div variants={item}>
-          <StatCard
-            title="Week Hours"
-            value={`${stats.timeTracker.weekHours}h`}
-            subtitle={stats.timeTracker.activeTimer ? '🔴 Timer active' : `Top: ${stats.timeTracker.topProject}`}
-            icon={<HiOutlineClock className="w-6 h-6" />}
-            gradient="from-orange-500 to-orange-700"
-          />
-        </motion.div>
-        <motion.div variants={item}>
-          <StatCard
-            title="Today's Calories"
-            value={stats.foodTracker.todayCalories}
-            subtitle={`${caloriePercent}% of goal (${stats.foodTracker.calorieGoal})`}
-            icon={<HiOutlineHeart className="w-6 h-6" />}
-            gradient="from-rose-500 to-rose-700"
-          />
-        </motion.div>
-      </motion.div>
+      <StatsGrid stats={stats} currency={currency} caloriePercent={caloriePercent} />
 
-      {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Task Distribution */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="glass-card p-6"
-        >
-          <h3 className="section-title mb-4">Task Distribution</h3>
-          {taskChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={taskChartData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {taskChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'rgba(30, 30, 40, 0.9)',
-                    border: 'none',
-                    borderRadius: '12px',
-                    color: '#fff',
-                  }}
-                  itemStyle={{ color: '#fff' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex items-center justify-center h-[250px] text-gray-400">No tasks yet</div>
-          )}
-          <div className="flex flex-wrap gap-4 justify-center mt-4">
-            {taskChartData.map((d) => (
-              <div key={d.name} className="flex items-center gap-2 text-sm">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: d.fill }} />
-                <span className="text-gray-600 dark:text-dark-100">{d.name}: {d.value}</span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Recent Activity */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="glass-card p-6"
-        >
-          <h3 className="section-title mb-4">Recent Activity</h3>
-          <div className="space-y-3 max-h-[320px] overflow-y-auto">
-            {activity.length > 0 ? activity.map((a: any) => (
-              <div key={a.id} className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-dark-500/50 transition-colors">
-                <span className="text-xl">{typeIcons[a.type] || '📌'}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                    {a.title} {a.metadata?.amount ? `- ${formatCurrency(a.metadata.amount as number, currency)}` : ''}
-                  </p>
-                  <p className="text-xs text-gray-400 dark:text-dark-200">
-                    {new Date(a.timestamp).toLocaleDateString()} · {a.action}
-                  </p>
-                </div>
-              </div>
-            )) : (
-              <div className="text-center py-8 text-gray-400">No recent activity</div>
-            )}
-          </div>
-        </motion.div>
+        <TaskDistributionChart taskChartData={taskChartData} />
+        <RecentActivityList activity={activity} currency={currency} />
       </div>
 
-      {/* Quick Stats Bottom */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="glass-card p-5 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-amber-500/10">
-            <HiOutlineKey className="w-6 h-6 text-amber-500" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.passwords.totalEntries}</p>
-            <p className="text-sm text-gray-500 dark:text-dark-200">Saved Passwords</p>
-          </div>
-        </div>
-        <div className="glass-card p-5 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-accent-500/10">
-            <HiOutlineChartBar className="w-6 h-6 text-accent-500" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.foodTracker.todayMeals}</p>
-            <p className="text-sm text-gray-500 dark:text-dark-200">Meals Today</p>
-          </div>
-        </div>
-        <div className="glass-card p-5 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-orange-500/10">
-            <HiOutlineClock className="w-6 h-6 text-orange-500" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.timeTracker.todayHours}h</p>
-            <p className="text-sm text-gray-500 dark:text-dark-200">Today's Focus Time</p>
-          </div>
-        </div>
-      </div>
+      <QuickStatsBottom stats={stats} />
     </div>
   );
 }
