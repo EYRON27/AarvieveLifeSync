@@ -52,6 +52,21 @@ export class AuthController {
       res.json({ success: true, ...result });
     } catch (error) { next(error); }
   }
+  async requestSignupOTP(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email } = req.body;
+      const result = await authService.requestSignupOTP(email);
+      res.json({ success: true, ...result });
+    } catch (error) { next(error); }
+  }
+
+  async verifyAndRegisterUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, otp, password, displayName, currency } = req.body;
+      const result = await authService.verifyAndRegisterUser(email, otp, password, displayName, currency);
+      res.json({ success: true, ...result });
+    } catch (error) { next(error); }
+  }
 }
 
 export const authController = new AuthController();

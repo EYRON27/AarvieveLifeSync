@@ -22,20 +22,38 @@ export default function LoginPage() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const { login, register } = useAuthStore();
+  // Signup OTP State
+  const [signupStep, setSignupStep] = useState<'details' | 'otp'>('details');
+  const [signupOtp, setSignupOtp] = useState(['', '', '', '', '', '']);
+  const signupOtpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const { login, register, registerWithOTP } = useAuthStore();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isRegister) {
+      if (password.length < 6) {
+        toast.error('Password must be at least 6 characters');
+        return;
+      }
+      setIsLoading(true);
+      try {
+        await authApi.requestSignupOTP(email);
+        toast.success('OTP sent to your email!');
+        setSignupStep('otp');
+      } catch (err: any) {
+        toast.error(err.response?.data?.message || 'Failed to send OTP');
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
     setIsLoading(true);
     try {
-      if (isRegister) {
-        await register(email, password, displayName);
-        toast.success('Account created successfully!');
-      } else {
-        await login(email, password);
-        toast.success('Welcome back!');
-      }
+      await login(email, password);
+      toast.success('Welcome back!');
       navigate('/dashboard');
     } catch (err: any) {
       let errorMessage = err.message || 'Invalid email or password. Please try again.';
@@ -129,6 +147,41 @@ export default function LoginPage() {
     }
   };
 
+  const handleSignupOtpChange = (index: number, value: string) => {
+    if (value.length > 1) return;
+    const newOtp = [...signupOtp];
+    newOtp[index] = value;
+    setSignupOtp(newOtp);
+    if (value !== '' && index < 5) {
+      signupOtpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleSignupOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && signupOtp[index] === '' && index > 0) {
+      signupOtpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleVerifySignupOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const otpString = signupOtp.join('');
+    if (otpString.length !== 6) {
+      toast.error('Please enter the full 6-digit OTP');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await registerWithOTP(email, password, displayName, otpString);
+      toast.success('Account created and verified successfully!');
+      navigate('/dashboard');
+    } catch (err: any) {
+      // Error toast is handled by authStore
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-900 via-dark-800 to-dark-900 p-4">
       {/* Background decorations */}
@@ -157,12 +210,41 @@ export default function LoginPage() {
           <h2 className="text-xl font-semibold text-white mb-6">
             {forgotPasswordStep !== 'none' 
               ? 'Reset Password' 
-              : isRegister 
-                ? 'Create Account' 
-                : 'Welcome Back'}
+              : isRegister && signupStep === 'otp'
+                ? 'Verify Email'
+                : isRegister 
+                  ? 'Create Account' 
+                  : 'Welcome Back'}
           </h2>
 
-          {forgotPasswordStep === 'none' ? (
+          {isRegister && signupStep === 'otp' ? (
+            <div className="w-full">
+              <button onClick={() => setSignupStep('details')} className="mb-6 flex items-center text-sm text-primary-300 hover:text-white transition-colors">
+                <HiArrowLeft className="w-4 h-4 mr-1" /> Back
+              </button>
+              <form onSubmit={handleVerifySignupOTP} className="space-y-6">
+                <p className="text-sm text-gray-400 mb-6">Enter the 6-digit code sent to<br/><span className="text-white font-medium">{email}</span></p>
+                <div className="flex justify-between gap-2">
+                  {signupOtp.map((digit, idx) => (
+                    <input
+                      key={idx}
+                      ref={el => signupOtpRefs.current[idx] = el}
+                      type="text"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleSignupOtpChange(idx, e.target.value)}
+                      onKeyDown={(e) => handleSignupOtpKeyDown(idx, e)}
+                      className="w-11 h-14 text-center rounded-xl bg-white/10 border border-white/10 text-white text-xl font-bold focus:outline-none focus:border-primary-400 focus:ring-4 focus:ring-primary-500/20 transition-all"
+                      required
+                    />
+                  ))}
+                </div>
+                <button type="submit" disabled={isLoading} className="w-full py-3.5 rounded-xl font-semibold text-white gradient-primary hover:shadow-lg hover:shadow-primary-500/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]">
+                  {isLoading ? 'Verifying...' : 'Complete Registration'}
+                </button>
+              </form>
+            </div>
+          ) : forgotPasswordStep === 'none' ? (
             <div className="space-y-4">
               <form onSubmit={handleSubmit} className="space-y-4">
                 {isRegister && (

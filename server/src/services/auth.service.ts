@@ -99,6 +99,96 @@ export class AuthService {
     
     return { message: 'Password successfully reset' };
   }
+  async requestSignupOTP(email: string) {
+    try {
+      await auth.getUserByEmail(email);
+      throw new BadRequestError('Email is already registered');
+    } catch (error: any) {
+      if (error.code !== 'auth/user-not-found') throw error;
+      // User does not exist, proceed
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    
+    await collections.otps.doc(email).set({
+      otp,
+      uid: 'signup',
+      expiresAt: expiresAt.toISOString(),
+    });
+
+    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      });
+
+      await transporter.sendMail({
+        from: `"LifeSync" <${process.env.SMTP_USER}>`,
+        to: email,
+        subject: 'Verify your email - LifeSync',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2>Welcome to LifeSync!</h2>
+            <p>Please use the following 6-digit code to complete your registration:</p>
+            <div style="background-color: #f4f4f4; padding: 15px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 5px; margin: 20px 0; border-radius: 8px; color: #333;">
+              ${otp}
+            </div>
+            <p style="color: #666; font-size: 14px;">This code will expire in 10 minutes.</p>
+          </div>
+        `
+      });
+      console.log(`✉️ REAL SIGNUP OTP EMAIL SENT TO: ${email}`);
+    } else {
+      console.log(`\n==============================================`);
+      console.log(`✉️ MOCK SIGNUP EMAIL SENT TO: ${email}`);
+      console.log(`🔑 YOUR SIGNUP OTP IS: ${otp}`);
+      console.log(`==============================================\n`);
+    }
+
+    return { message: 'Signup OTP sent successfully' };
+  }
+
+  async verifyAndRegisterUser(email: string, otp: string, password: string, displayName: string, currency: string) {
+    const doc = await collections.otps.doc(email).get();
+    
+    if (!doc.exists) throw new BadRequestError('Invalid or expired OTP');
+    
+    const data = doc.data()!;
+    if (data.otp !== otp || data.uid !== 'signup') throw new BadRequestError('Invalid OTP');
+    
+    if (new Date(data.expiresAt) < new Date()) throw new BadRequestError('OTP has expired');
+
+    // 1. Create user in Firebase Admin with emailVerified: true
+    const userRecord = await auth.createUser({
+      email,
+      password,
+      displayName,
+      emailVerified: true
+    });
+
+    // 2. Create the user document in Firestore
+    const dbUser = {
+      uid: userRecord.uid,
+      email,
+      displayName,
+      preferences: {
+        theme: 'system',
+        currency: currency || 'PHP'
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    await collections.users.doc(userRecord.uid).set(dbUser);
+
+    // 3. Delete OTP
+    await collections.otps.doc(email).delete();
+    
+    return { success: true, uid: userRecord.uid };
+  }
 }
 
 export const authService = new AuthService();

@@ -24,7 +24,12 @@ export default function LoginModal() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
   
-  const { login, register, resetPassword } = useAuthStore();
+  // Signup OTP State
+  const [signupStep, setSignupStep] = useState<'details' | 'otp'>('details');
+  const [signupOtp, setSignupOtp] = useState(['', '', '', '', '', '']);
+  const signupOtpRefs = useRef<(HTMLInputElement | null)[]>([]);
+  
+  const { login, register, registerWithOTP, resetPassword } = useAuthStore();
   const { isLoginModalOpen, setLoginModalOpen, loginModalMode } = useUIStore();
   const navigate = useNavigate();
 
@@ -45,6 +50,8 @@ export default function LoginModal() {
       setShowConfirmPassword(false);
       setForgotPasswordStep('none');
       setOtp(['', '', '', '', '', '']);
+      setSignupStep('details');
+      setSignupOtp(['', '', '', '', '', '']);
     }, 300);
   };
 
@@ -58,13 +65,21 @@ export default function LoginModal() {
           setIsLoading(false);
           return;
         }
-        const trimmedName = displayName.trim();
-        await register(email, password, trimmedName, 'PHP');
-        const name = trimmedName.split(' ')[0] || email.split('@')[0];
-        toast.success(`Account created, ${name}! Please check your email to verify your account before logging in.`, { duration: 8000 });
-        setIsRegister(false); // Switch to login view
-        setPassword('');
-        setConfirmPassword('');
+        if (password.length < 6) {
+          toast.error('Password must be at least 6 characters');
+          setIsLoading(false);
+          return;
+        }
+        try {
+          await authApi.requestSignupOTP(email);
+          toast.success('OTP sent to your email!');
+          setSignupStep('otp');
+        } catch (err: any) {
+          toast.error(err.response?.data?.message || 'Failed to send OTP');
+        } finally {
+          setIsLoading(false);
+        }
+        return;
       } else {
         await login(email, password);
         const storedUser = useAuthStore.getState().user;
@@ -170,6 +185,44 @@ export default function LoginModal() {
   const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Backspace' && otp[index] === '' && index > 0) {
       otpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleSignupOtpChange = (index: number, value: string) => {
+    if (value.length > 1) return;
+    const newOtp = [...signupOtp];
+    newOtp[index] = value;
+    setSignupOtp(newOtp);
+    if (value !== '' && index < 5) {
+      signupOtpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleSignupOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && signupOtp[index] === '' && index > 0) {
+      signupOtpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleVerifySignupOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const otpString = signupOtp.join('');
+    if (otpString.length !== 6) {
+      toast.error('Please enter the full 6-digit OTP');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const trimmedName = displayName.trim();
+      await registerWithOTP(email, password, trimmedName, otpString, 'PHP');
+      const name = trimmedName.split(' ')[0] || email.split('@')[0];
+      toast.success(name ? `Welcome, ${name}! 👋` : 'Welcome!');
+      handleClose();
+      navigate('/dashboard');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || 'Registration failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -319,38 +372,69 @@ export default function LoginModal() {
                 {/* 2. Sign Up Form (Right Half) */}
                 <div className={`absolute top-0 right-0 w-1/2 h-full flex flex-col justify-center p-10 transition-all duration-500 ease-in-out ${!isRegister ? 'opacity-0 -translate-x-12 pointer-events-none' : 'opacity-100 translate-x-0 z-10'}`}>
                   <div className="w-full max-w-[320px] mx-auto text-center">
-                    <h2 className="text-3xl font-bold text-white mb-2 tracking-tight">Create Account</h2>
-                    <p className="text-sm text-white/40 mb-8">use your email for registration:</p>
-                    <form onSubmit={(e) => handleSubmit(e, 'register')} className="space-y-3.5">
-                      <div className="relative">
-                        <HiOutlineUser className={iconClass} />
-                        <input type="text" placeholder="Name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className={inputClass} required />
-                      </div>
-                      <div className="relative">
-                        <HiOutlineMail className={iconClass} />
-                        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} required />
-                      </div>
-                      <div className="relative">
-                        <HiOutlineLockClosed className={iconClass} />
-                        <input type={showPassword ? 'text' : 'password'} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} required minLength={6} />
-                        <button type="button" tabIndex={-1} onClick={() => setShowPassword(v => !v)} className={eyeClass}>
-                          {showPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
+                    {isRegister && signupStep === 'otp' ? (
+                      <>
+                        <button onClick={() => setSignupStep('details')} className="absolute top-10 left-10 text-white/50 hover:text-white flex items-center text-sm transition-colors z-20">
+                          <HiArrowLeft className="w-4 h-4 mr-1" /> Back
                         </button>
-                      </div>
-                      <div className="relative">
-                        <HiOutlineLockClosed className={iconClass} />
-                        <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} required minLength={6} />
-                        <button type="button" tabIndex={-1} onClick={() => setShowConfirmPassword(v => !v)} className={eyeClass}>
-                          {showConfirmPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
-                        </button>
-                      </div>
-
-                      <div className="pt-3">
-                        <button type="submit" disabled={isLoading} className="w-full py-3.5 rounded-full bg-[#5c7cfa] hover:bg-[#4c6cf0] text-white font-bold text-sm tracking-widest uppercase shadow-lg shadow-[#5c7cfa]/20 transition-all active:scale-95 disabled:opacity-70">
-                          {isLoading ? 'Wait...' : 'Sign Up'}
-                        </button>
-                      </div>
-                    </form>
+                        <h2 className="text-3xl font-bold text-white mb-2 tracking-tight">Verify Email</h2>
+                        <form onSubmit={handleVerifySignupOTP} className="space-y-6 mt-8">
+                          <p className="text-sm text-white/60 mb-6">Enter the 6-digit code sent to<br/><span className="text-white font-medium">{email}</span></p>
+                          <div className="flex justify-between gap-2">
+                            {signupOtp.map((digit, idx) => (
+                              <input
+                                key={idx}
+                                ref={el => signupOtpRefs.current[idx] = el}
+                                type="text"
+                                maxLength={1}
+                                value={digit}
+                                onChange={(e) => handleSignupOtpChange(idx, e.target.value)}
+                                onKeyDown={(e) => handleSignupOtpKeyDown(idx, e)}
+                                className="w-12 h-14 text-center rounded-xl bg-black/20 border border-white/[0.08] text-white text-xl font-bold focus:outline-none focus:border-[#5c7cfa] focus:bg-white/[0.03] transition-all"
+                                required
+                              />
+                            ))}
+                          </div>
+                          <button type="submit" disabled={isLoading} className="w-full py-3.5 rounded-full bg-[#5c7cfa] hover:bg-[#4c6cf0] text-white font-bold text-sm tracking-widest uppercase shadow-lg shadow-[#5c7cfa]/20 transition-all active:scale-95 disabled:opacity-70">
+                            {isLoading ? 'Verifying...' : 'Complete Registration'}
+                          </button>
+                        </form>
+                      </>
+                    ) : (
+                      <>
+                        <h2 className="text-3xl font-bold text-white mb-2 tracking-tight">Create Account</h2>
+                        <p className="text-sm text-white/40 mb-8">use your email for registration:</p>
+                        <form onSubmit={(e) => handleSubmit(e, 'register')} className="space-y-3.5">
+                          <div className="relative">
+                            <HiOutlineUser className={iconClass} />
+                            <input type="text" placeholder="Name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className={inputClass} required />
+                          </div>
+                          <div className="relative">
+                            <HiOutlineMail className={iconClass} />
+                            <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} required />
+                          </div>
+                          <div className="relative">
+                            <HiOutlineLockClosed className={iconClass} />
+                            <input type={showPassword ? 'text' : 'password'} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} required minLength={6} />
+                            <button type="button" tabIndex={-1} onClick={() => setShowPassword(v => !v)} className={eyeClass}>
+                              {showPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                          <div className="relative">
+                            <HiOutlineLockClosed className={iconClass} />
+                            <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} required minLength={6} />
+                            <button type="button" tabIndex={-1} onClick={() => setShowConfirmPassword(v => !v)} className={eyeClass}>
+                              {showConfirmPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                          <div className="pt-3">
+                            <button type="submit" disabled={isLoading} className="w-full py-3.5 rounded-full bg-[#5c7cfa] hover:bg-[#4c6cf0] text-white font-bold text-sm tracking-widest uppercase shadow-lg shadow-[#5c7cfa]/20 transition-all active:scale-95 disabled:opacity-70">
+                              {isLoading ? 'Wait...' : 'Sign Up'}
+                            </button>
+                          </div>
+                        </form>
+                      </>
+                    )}
                   </div>
                 </div>
 

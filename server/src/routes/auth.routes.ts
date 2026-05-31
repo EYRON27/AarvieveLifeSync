@@ -14,4 +14,8 @@ router.post('/forgot-password/request-otp', (req, res, next) => authController.r
 router.post('/forgot-password/verify-otp', (req, res, next) => authController.verifyPasswordResetOTP(req, res, next));
 router.post('/forgot-password/reset', (req, res, next) => authController.resetPasswordWithOTP(req, res, next));
 
+// OTP Signup Routes
+router.post('/signup/request-otp', (req, res, next) => authController.requestSignupOTP(req, res, next));
+router.post('/signup/verify-and-register', (req, res, next) => authController.verifyAndRegisterUser(req, res, next));
+
 export default router;
