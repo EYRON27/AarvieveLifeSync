@@ -6,6 +6,7 @@ import {
   signOut,
   updateProfile,
   sendPasswordResetEmail,
+  sendEmailVerification,
   onAuthStateChanged,
   User as FirebaseUser,
 } from 'firebase/auth';
@@ -39,6 +40,12 @@ export const useAuthStore = create<AuthState>()((set) => ({
     try {
       set({ isLoading: true, error: null });
       const cred = await signInWithEmailAndPassword(firebaseAuth, email, password);
+      
+      if (!cred.user.emailVerified) {
+        await signOut(firebaseAuth);
+        throw new Error('Please verify your email before logging in. Check your inbox.');
+      }
+
       try {
         const res = await authApi.syncUser({
           uid: cred.user.uid,
@@ -74,7 +81,11 @@ export const useAuthStore = create<AuthState>()((set) => ({
       } catch {
         // Backend sync failed, but Firebase auth succeeded — continue
       }
-      set({ user: cred.user, isAuthenticated: true, isLoading: false });
+
+      await sendEmailVerification(cred.user);
+      await signOut(firebaseAuth);
+
+      set({ user: null, isAuthenticated: false, isLoading: false });
     } catch (err: any) {
       set({ error: err.message || 'Registration failed', isLoading: false });
       throw err;
@@ -105,6 +116,12 @@ export const useAuthStore = create<AuthState>()((set) => ({
   initializeAuth: () => {
     const unsubscribe = onAuthStateChanged(firebaseAuth, async (user) => {
       if (user) {
+        if (!user.emailVerified) {
+          await signOut(firebaseAuth);
+          set({ user: null, isAuthenticated: false, isLoading: false });
+          return;
+        }
+
         try {
           const res = await authApi.syncUser({
             uid: user.uid,
@@ -115,8 +132,10 @@ export const useAuthStore = create<AuthState>()((set) => ({
         } catch {
           // Backend may be unreachable during dev
         }
+        set({ user, isAuthenticated: true, isLoading: false });
+      } else {
+        set({ user: null, isAuthenticated: false, isLoading: false });
       }
-      set({ user, isAuthenticated: !!user, isLoading: false });
     });
     return unsubscribe;
   },

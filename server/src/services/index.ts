@@ -6,3 +6,4 @@ export { foodEntryService } from './foodEntry.service';
 export { dashboardService } from './dashboard.service';
 export { userService } from './user.service';
 export { pdfService } from './pdf.service';
+export { authService } from './auth.service';

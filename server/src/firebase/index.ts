@@ -25,6 +25,7 @@ export const collections = {
   timeEntries: db.collection('timeEntries'),
   foodEntries: db.collection('foodEntries'),
   reports: db.collection('reports'),
+  otps: db.collection('otps'),
 };
 
 export default admin;

@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HiOutlineMail, HiOutlineLockClosed, HiOutlineUser, HiOutlineX, HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi';
+import { HiOutlineMail, HiOutlineLockClosed, HiOutlineUser, HiOutlineX, HiOutlineEye, HiOutlineEyeOff, HiArrowLeft } from 'react-icons/hi';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
+import { authApi } from '@/services/endpoints';
 import { FullScreenLoader } from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
 
@@ -17,6 +18,11 @@ export default function LoginModal() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // OTP Flow State
+  const [forgotPasswordStep, setForgotPasswordStep] = useState<'none' | 'email' | 'otp' | 'new-password'>('none');
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
   
   const { login, register, resetPassword } = useAuthStore();
   const { isLoginModalOpen, setLoginModalOpen, loginModalMode } = useUIStore();
@@ -37,6 +43,8 @@ export default function LoginModal() {
       setDisplayName('');
       setShowPassword(false);
       setShowConfirmPassword(false);
+      setForgotPasswordStep('none');
+      setOtp(['', '', '', '', '', '']);
     }, 300);
   };
 
@@ -53,15 +61,18 @@ export default function LoginModal() {
         const trimmedName = displayName.trim();
         await register(email, password, trimmedName, 'PHP');
         const name = trimmedName.split(' ')[0] || email.split('@')[0];
-        toast.success(`Welcome, ${name}! Your account is ready 🎉`);
+        toast.success(`Account created, ${name}! Please check your email to verify your account before logging in.`, { duration: 8000 });
+        setIsRegister(false); // Switch to login view
+        setPassword('');
+        setConfirmPassword('');
       } else {
         await login(email, password);
         const storedUser = useAuthStore.getState().user;
         const name = storedUser?.displayName?.split(' ')[0] || storedUser?.email?.split('@')[0] || '';
         toast.success(name ? `Welcome back, ${name}! 👋` : 'Welcome back!');
+        handleClose();
+        navigate('/dashboard');
       }
-      handleClose();
-      navigate('/dashboard');
     } catch (err: any) {
       const code = err.code || '';
       let errorMessage = err.message || 'Something went wrong. Please try again.';
@@ -83,16 +94,82 @@ export default function LoginModal() {
     }
   };
 
-  const handleResetPassword = async () => {
+  const handleRequestOTP = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!email) {
-      toast.error('Enter your email first');
+      toast.error('Please enter your email first');
       return;
     }
+    setIsLoading(true);
     try {
-      await resetPassword(email);
-      toast.success('Password reset email sent!');
-    } catch {
-      toast.error('Failed to send reset email');
+      await authApi.requestPasswordResetOTP(email);
+      toast.success('OTP sent to your email!');
+      setForgotPasswordStep('otp');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to send OTP');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const otpString = otp.join('');
+    if (otpString.length !== 6) {
+      toast.error('Please enter the full 6-digit OTP');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await authApi.verifyPasswordResetOTP(email, otpString);
+      setForgotPasswordStep('new-password');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Invalid OTP');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetWithOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const otpString = otp.join('');
+      await authApi.resetPasswordWithOTP(email, otpString, password);
+      toast.success('Password successfully reset! You can now log in.');
+      setForgotPasswordStep('none');
+      setIsRegister(false);
+      setPassword('');
+      setConfirmPassword('');
+      setOtp(['', '', '', '', '', '']);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to reset password');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOtpChange = (index: number, value: string) => {
+    if (value.length > 1) return; // one char max
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+    if (value !== '' && index < 5) {
+      otpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && otp[index] === '' && index > 0) {
+      otpRefs.current[index - 1]?.focus();
     }
   };
 
@@ -136,6 +213,77 @@ export default function LoginModal() {
                 <HiOutlineX className="w-5 h-5" />
               </button>
 
+              {forgotPasswordStep !== 'none' ? (
+                <div className="w-full h-full flex flex-col items-center justify-center p-8 relative z-20 min-h-[580px]">
+                  <button onClick={() => setForgotPasswordStep('none')} className="absolute top-6 left-6 text-white/50 hover:text-white flex items-center text-sm transition-colors z-50">
+                    <HiArrowLeft className="w-4 h-4 mr-1" /> Back to login
+                  </button>
+                  <div className="w-full max-w-[320px] mx-auto text-center">
+                    <h2 className="text-3xl font-bold text-white mb-2 tracking-tight">Reset Password</h2>
+                    
+                    {forgotPasswordStep === 'email' && (
+                      <form onSubmit={handleRequestOTP} className="space-y-4 mt-8">
+                        <p className="text-sm text-white/60 mb-6">Enter your email address and we'll send you a 6-digit verification code.</p>
+                        <div className="relative">
+                          <HiOutlineMail className={iconClass} />
+                          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} required />
+                        </div>
+                        <button type="submit" disabled={isLoading} className="w-full py-3.5 rounded-full bg-[#5c7cfa] hover:bg-[#4c6cf0] text-white font-bold text-sm tracking-widest uppercase shadow-lg shadow-[#5c7cfa]/20 transition-all active:scale-95 disabled:opacity-70">
+                          {isLoading ? 'Sending...' : 'Send OTP'}
+                        </button>
+                      </form>
+                    )}
+
+                    {forgotPasswordStep === 'otp' && (
+                      <form onSubmit={handleVerifyOTP} className="space-y-6 mt-8">
+                        <p className="text-sm text-white/60 mb-6">Enter the 6-digit code sent to<br/><span className="text-white font-medium">{email}</span></p>
+                        <div className="flex justify-between gap-2">
+                          {otp.map((digit, idx) => (
+                            <input
+                              key={idx}
+                              ref={el => otpRefs.current[idx] = el}
+                              type="text"
+                              maxLength={1}
+                              value={digit}
+                              onChange={(e) => handleOtpChange(idx, e.target.value)}
+                              onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                              className="w-12 h-14 text-center rounded-xl bg-black/20 border border-white/[0.08] text-white text-xl font-bold focus:outline-none focus:border-[#5c7cfa] focus:bg-white/[0.03] transition-all"
+                              required
+                            />
+                          ))}
+                        </div>
+                        <button type="submit" disabled={isLoading} className="w-full py-3.5 rounded-full bg-[#5c7cfa] hover:bg-[#4c6cf0] text-white font-bold text-sm tracking-widest uppercase shadow-lg shadow-[#5c7cfa]/20 transition-all active:scale-95 disabled:opacity-70">
+                          {isLoading ? 'Verifying...' : 'Verify Code'}
+                        </button>
+                      </form>
+                    )}
+
+                    {forgotPasswordStep === 'new-password' && (
+                      <form onSubmit={handleResetWithOTP} className="space-y-4 mt-8">
+                        <p className="text-sm text-white/60 mb-6">Enter your new password below.</p>
+                        <div className="relative">
+                          <HiOutlineLockClosed className={iconClass} />
+                          <input type={showPassword ? 'text' : 'password'} placeholder="New Password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} required minLength={6} />
+                          <button type="button" tabIndex={-1} onClick={() => setShowPassword(v => !v)} className={eyeClass}>
+                            {showPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                        <div className="relative">
+                          <HiOutlineLockClosed className={iconClass} />
+                          <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm New Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} required minLength={6} />
+                          <button type="button" tabIndex={-1} onClick={() => setShowConfirmPassword(v => !v)} className={eyeClass}>
+                            {showConfirmPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                        <button type="submit" disabled={isLoading} className="w-full py-3.5 rounded-full bg-[#5c7cfa] hover:bg-[#4c6cf0] text-white font-bold text-sm tracking-widest uppercase shadow-lg shadow-[#5c7cfa]/20 transition-all active:scale-95 disabled:opacity-70">
+                          {isLoading ? 'Updating...' : 'Reset Password'}
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <>
               {/* ===== DESKTOP LAYOUT (SLIDING PANELS) ===== */}
               <div className="hidden md:block w-full h-full relative min-h-[580px]">
                 
@@ -157,7 +305,7 @@ export default function LoginModal() {
                         </button>
                       </div>
                       <div className="pt-1 pb-4">
-                        <button type="button" onClick={handleResetPassword} className="text-xs font-medium text-white/40 hover:text-white transition-colors">
+                        <button type="button" onClick={() => setForgotPasswordStep('email')} className="text-xs font-medium text-white/40 hover:text-white transition-colors">
                           Forgot your password?
                         </button>
                       </div>
@@ -298,7 +446,7 @@ export default function LoginModal() {
                         )}
                         {!isRegister && (
                           <div className="pt-1 pb-2">
-                            <button type="button" onClick={handleResetPassword} className="text-xs font-medium text-white/40 hover:text-white transition-colors">
+                            <button type="button" onClick={() => setForgotPasswordStep('email')} className="text-xs font-medium text-white/40 hover:text-white transition-colors">
                               Forgot your password?
                             </button>
                           </div>
@@ -332,6 +480,8 @@ export default function LoginModal() {
                   </button>
                 </div>
               </div>
+              </>
+              )}
 
             </motion.div>
           </div>
@@ -341,12 +491,18 @@ export default function LoginModal() {
   );
 
   if (!mounted) return null;
+
+  let loaderMessage = isRegister ? 'Creating your account...' : 'Signing you in...';
+  if (forgotPasswordStep === 'email') loaderMessage = 'Sending OTP...';
+  if (forgotPasswordStep === 'otp') loaderMessage = 'Verifying OTP...';
+  if (forgotPasswordStep === 'new-password') loaderMessage = 'Resetting Password...';
+
   return (
     <>
       {createPortal(modalContent, document.body)}
       <FullScreenLoader
         isVisible={isLoading}
-        message={isRegister ? 'Creating your account...' : 'Signing you in...'}
+        message={loaderMessage}
       />
     </>
   );
