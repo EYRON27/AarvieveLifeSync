@@ -62,19 +62,14 @@ export const useAuthStore = create<AuthState>()((set) => ({
       const cred = await createUserWithEmailAndPassword(firebaseAuth, email, password);
       await updateProfile(cred.user, { displayName });
       try {
-        let res = await authApi.syncUser({ uid: cred.user.uid, email, displayName, currency: currency || 'USD' });
-
-        // Race condition fix: If onAuthStateChanged created the user first without currency or displayName, update it now
-        const needsCurrencyUpdate = currency && res.data.data.preferences?.currency !== currency;
-        const needsNameUpdate = displayName && res.data.data.displayName !== displayName;
-
-        if (needsCurrencyUpdate || needsNameUpdate) {
-          res = await authApi.updateProfile({
-            displayName: displayName || res.data.data.displayName,
-            preferences: { ...res.data.data.preferences, currency: currency || res.data.data.preferences?.currency }
-          });
-        }
-
+        // Always call syncUser first (may race with onAuthStateChanged)
+        const syncRes = await authApi.syncUser({ uid: cred.user.uid, email, displayName, currency: currency || 'PHP' });
+        // Then always force-update profile to guarantee correct name + currency
+        const existingPrefs = syncRes.data.data?.preferences || {};
+        const res = await authApi.updateProfile({
+          displayName,
+          preferences: { ...existingPrefs, currency: currency || 'PHP' }
+        });
         set({ dbUser: res.data.data });
       } catch {
         // Backend sync failed, but Firebase auth succeeded — continue

@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HiOutlineMail, HiOutlineLockClosed, HiOutlineUser, HiOutlineX, HiOutlineCurrencyDollar } from 'react-icons/hi';
+import { HiOutlineMail, HiOutlineLockClosed, HiOutlineUser, HiOutlineX, HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { FullScreenLoader } from '@/components/LoadingSpinner';
-import { CURRENCIES } from '@/utils/currency';
 import toast from 'react-hot-toast';
 
 export default function LoginModal() {
@@ -15,8 +14,9 @@ export default function LoginModal() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [currency, setCurrency] = useState('PHP');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const { login, register, resetPassword } = useAuthStore();
   const { isLoginModalOpen, setLoginModalOpen, loginModalMode } = useUIStore();
@@ -35,7 +35,8 @@ export default function LoginModal() {
       setPassword('');
       setConfirmPassword('');
       setDisplayName('');
-      setCurrency('PHP');
+      setShowPassword(false);
+      setShowConfirmPassword(false);
     }, 300);
   };
 
@@ -49,8 +50,9 @@ export default function LoginModal() {
           setIsLoading(false);
           return;
         }
-        await register(email, password, displayName, currency);
-        const name = displayName.split(' ')[0] || email.split('@')[0];
+        const trimmedName = displayName.trim();
+        await register(email, password, trimmedName, 'PHP');
+        const name = trimmedName.split(' ')[0] || email.split('@')[0];
         toast.success(`Welcome, ${name}! Your account is ready 🎉`);
       } else {
         await login(email, password);
@@ -100,8 +102,9 @@ export default function LoginModal() {
     return () => setMounted(false);
   }, []);
 
-  const inputClass = "w-full pl-11 pr-4 py-3 rounded-xl bg-black/20 border border-white/[0.08] text-white text-sm placeholder-white/30 focus:outline-none focus:border-[#5c7cfa] focus:bg-white/[0.03] transition-all";
+  const inputClass = "w-full pl-11 pr-11 py-3 rounded-xl bg-black/20 border border-white/[0.08] text-white text-sm placeholder-white/30 focus:outline-none focus:border-[#5c7cfa] focus:bg-white/[0.03] transition-all";
   const iconClass = "absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40";
+  const eyeClass = "absolute right-3 top-1/2 -translate-y-1/2 p-1 text-white/40 hover:text-white/80 transition-colors";
 
   const modalContent = (
     <AnimatePresence>
@@ -148,7 +151,10 @@ export default function LoginModal() {
                       </div>
                       <div className="relative">
                         <HiOutlineLockClosed className={iconClass} />
-                        <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} required />
+                        <input type={showPassword ? 'text' : 'password'} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} required />
+                        <button type="button" tabIndex={-1} onClick={() => setShowPassword(v => !v)} className={eyeClass}>
+                          {showPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
+                        </button>
                       </div>
                       <div className="pt-1 pb-4">
                         <button type="button" onClick={handleResetPassword} className="text-xs font-medium text-white/40 hover:text-white transition-colors">
@@ -178,20 +184,19 @@ export default function LoginModal() {
                       </div>
                       <div className="relative">
                         <HiOutlineLockClosed className={iconClass} />
-                        <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} required minLength={6} />
+                        <input type={showPassword ? 'text' : 'password'} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} required minLength={6} />
+                        <button type="button" tabIndex={-1} onClick={() => setShowPassword(v => !v)} className={eyeClass}>
+                          {showPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
+                        </button>
                       </div>
                       <div className="relative">
                         <HiOutlineLockClosed className={iconClass} />
-                        <input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} required minLength={6} />
+                        <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} required minLength={6} />
+                        <button type="button" tabIndex={-1} onClick={() => setShowConfirmPassword(v => !v)} className={eyeClass}>
+                          {showConfirmPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
+                        </button>
                       </div>
-                      <div className="relative">
-                        <HiOutlineCurrencyDollar className={iconClass} />
-                        <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={`${inputClass} appearance-none cursor-pointer`}>
-                          {CURRENCIES.map((c) => (
-                            <option key={c.code} value={c.code}>{c.label}</option>
-                          ))}
-                        </select>
-                      </div>
+
                       <div className="pt-3">
                         <button type="submit" disabled={isLoading} className="w-full py-3.5 rounded-full bg-[#5c7cfa] hover:bg-[#4c6cf0] text-white font-bold text-sm tracking-widest uppercase shadow-lg shadow-[#5c7cfa]/20 transition-all active:scale-95 disabled:opacity-70">
                           {isLoading ? 'Wait...' : 'Sign Up'}
@@ -274,22 +279,21 @@ export default function LoginModal() {
                         </div>
                         <div className="relative">
                           <HiOutlineLockClosed className={iconClass} />
-                          <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} required minLength={6} />
+                          <input type={showPassword ? 'text' : 'password'} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} required minLength={6} />
+                          <button type="button" tabIndex={-1} onClick={() => setShowPassword(v => !v)} className={eyeClass}>
+                            {showPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
+                          </button>
                         </div>
                         {isRegister && (
                           <>
                             <div className="relative">
                               <HiOutlineLockClosed className={iconClass} />
-                              <input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} required minLength={6} />
+                              <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} required minLength={6} />
+                              <button type="button" tabIndex={-1} onClick={() => setShowConfirmPassword(v => !v)} className={eyeClass}>
+                                {showConfirmPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
+                              </button>
                             </div>
-                            <div className="relative">
-                              <HiOutlineCurrencyDollar className={iconClass} />
-                              <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={`${inputClass} appearance-none cursor-pointer`}>
-                                {CURRENCIES.map((c) => (
-                                  <option key={c.code} value={c.code}>{c.label}</option>
-                                ))}
-                              </select>
-                            </div>
+
                           </>
                         )}
                         {!isRegister && (
