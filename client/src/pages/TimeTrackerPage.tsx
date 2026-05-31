@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
-import { HiOutlinePlay, HiOutlineStop, HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { HiOutlinePlus } from 'react-icons/hi';
 import toast from 'react-hot-toast';
-import Modal from '@/components/Modal';
 import { PageLoader } from '@/components/LoadingSpinner';
 import { timeApi } from '@/services/endpoints';
+import TimerCard from '@/components/timetracker/TimerCard';
+import WeeklyChart from '@/components/timetracker/WeeklyChart';
+import RecentEntries from '@/components/timetracker/RecentEntries';
+import TimeModals from '@/components/timetracker/TimeModals';
 
 export default function TimeTrackerPage() {
   const [elapsed, setElapsed] = useState(0);
@@ -121,130 +122,34 @@ export default function TimeTrackerPage() {
         </button>
       </div>
 
-      {/* Timer Card */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-        className="glass-card p-8 text-center">
-        <p className="text-sm font-medium text-gray-500 dark:text-dark-200 mb-2">
-          {running ? `Working on: ${running.title}` : 'Ready to start'}
-        </p>
-        <p className={`text-6xl font-display font-bold tracking-wider ${running ? 'gradient-text' : 'text-gray-300 dark:text-dark-400'}`}>
-          {formatTime(elapsed)}
-        </p>
-        <div className="mt-6">
-          {running ? (
-            <button onClick={() => stopMutation.mutate(running.id)}
-              className="px-8 py-3 rounded-xl font-semibold text-white bg-red-500 hover:bg-red-600 transition-all inline-flex items-center gap-2">
-              <HiOutlineStop className="w-5 h-5" /> Stop Timer
-            </button>
-          ) : (
-            <button onClick={openStartTimerModal}
-              className="btn-primary inline-flex items-center gap-2 px-8 py-3">
-              <HiOutlinePlay className="w-5 h-5" /> Start Timer
-            </button>
-          )}
-        </div>
-      </motion.div>
+      <TimerCard 
+        running={running} 
+        elapsed={elapsed} 
+        formatTime={formatTime} 
+        stopMutation={stopMutation} 
+        openStartTimerModal={openStartTimerModal} 
+      />
 
-      {/* Weekly Chart */}
-      {summary?.weeklyTrend && (
-        <div className="glass-card p-6">
-          <h3 className="section-title mb-4">Weekly Overview</h3>
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="text-center">
-              <p className="text-2xl font-bold gradient-text">{summary.totalHours}h</p>
-              <p className="text-sm text-gray-500 dark:text-dark-200">This Week</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{summary.averageDaily}h</p>
-              <p className="text-sm text-gray-500 dark:text-dark-200">Daily Avg</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{Object.keys(summary.byProject || {}).length}</p>
-              <p className="text-sm text-gray-500 dark:text-dark-200">Projects</p>
-            </div>
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={summary.weeklyTrend}>
-              <XAxis dataKey="day" tick={{ fontSize: 12, fill: '#888' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 12, fill: '#888' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ backgroundColor: 'rgba(30,30,40,0.9)', border: 'none', borderRadius: '12px', color: '#fff' }} />
-              <Bar dataKey="hours" fill="#5c7cfa" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+      <WeeklyChart summary={summary} />
 
-      {/* Recent Entries */}
-      <div className="glass-card p-6">
-        <h3 className="section-title mb-4">Recent Entries</h3>
-        <div className="space-y-3">
-          {(entries || []).slice(0, 15).map((entry: any) => (
-            <div key={entry.id} className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-dark-500/50 transition-colors">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.isRunning ? '#ff6b6b' : '#51cf66' }} />
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-900 dark:text-white text-sm">{entry.title}</p>
-                <p className="text-xs text-gray-400">{entry.project} · {new Date(entry.startTime).toLocaleDateString()}</p>
-              </div>
-              <p className="text-sm font-semibold text-gray-700 dark:text-dark-100">
-                {entry.isRunning ? '⏱️ Running' : formatTime(entry.duration || 0)}
-              </p>
-              {!entry.isRunning && (
-                <button onClick={() => deleteMutation.mutate(entry.id)} className="btn-ghost p-1 text-red-500">
-                  <HiOutlineTrash className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+      <RecentEntries 
+        entries={entries} 
+        formatTime={formatTime} 
+        deleteMutation={deleteMutation} 
+      />
 
-      {/* Manual Entry Modal */}
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Manual Time Entry">
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          if (new Date(form.endTime) < new Date(form.startTime)) {
-            toast.error('End time cannot be earlier than start time');
-            return;
-          }
-          manualMutation.mutate(form);
-        }} className="space-y-4">
-          <input type="text" placeholder="What did you work on?" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input-field" required />
-          <input type="text" placeholder="Project" value={form.project} onChange={(e) => setForm({ ...form, project: e.target.value })} className="input-field" />
-          <div className="grid grid-cols-2 gap-3">
-            <input type="datetime-local" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} className="input-field" required />
-            <input type="datetime-local" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className="input-field" required />
-          </div>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
-            <button type="submit" className="btn-primary flex-1">Add Entry</button>
-          </div>
-        </form>
-      </Modal>
-      {/* Start Timer Modal */}
-      <Modal isOpen={startTimerModalOpen} onClose={() => setStartTimerModalOpen(false)} title="Start Timer">
-        <form onSubmit={handleStartTimerSubmit} className="space-y-4">
-          <input 
-            type="text" 
-            placeholder="What are you working on?" 
-            value={startTimerForm.title} 
-            onChange={(e) => setStartTimerForm({ ...startTimerForm, title: e.target.value })} 
-            className="input-field" 
-            required 
-            autoFocus
-          />
-          <input 
-            type="text" 
-            placeholder="Project name (optional)" 
-            value={startTimerForm.project} 
-            onChange={(e) => setStartTimerForm({ ...startTimerForm, project: e.target.value })} 
-            className="input-field" 
-          />
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setStartTimerModalOpen(false)} className="btn-secondary flex-1">Cancel</button>
-            <button type="submit" className="btn-primary flex-1">Start</button>
-          </div>
-        </form>
-      </Modal>
+      <TimeModals 
+        modalOpen={modalOpen} 
+        setModalOpen={setModalOpen} 
+        form={form} 
+        setForm={setForm} 
+        manualMutation={manualMutation}
+        startTimerModalOpen={startTimerModalOpen} 
+        setStartTimerModalOpen={setStartTimerModalOpen} 
+        startTimerForm={startTimerForm} 
+        setStartTimerForm={setStartTimerForm} 
+        handleStartTimerSubmit={handleStartTimerSubmit} 
+      />
     </div>
   );
 }

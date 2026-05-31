@@ -1,29 +1,13 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HiOutlineMail, HiOutlineLockClosed, HiOutlineUser, HiOutlineX, HiOutlineEye, HiOutlineEyeOff, HiOutlineCurrencyDollar } from 'react-icons/hi';
+import { HiOutlineMail, HiOutlineLockClosed, HiOutlineUser, HiOutlineX, HiOutlineCurrencyDollar } from 'react-icons/hi';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { FullScreenLoader } from '@/components/LoadingSpinner';
 import { CURRENCIES } from '@/utils/currency';
 import toast from 'react-hot-toast';
-
-
-
-function getPasswordStrength(password: string) {
-  let score = 0;
-  if (password.length >= 6) score++;
-  if (password.length >= 10) score++;
-  if (/[A-Z]/.test(password)) score++;
-  if (/[0-9]/.test(password)) score++;
-  if (/[^A-Za-z0-9]/.test(password)) score++;
-  if (score <= 1) return { label: 'Weak', color: 'bg-rose-500', width: '20%' };
-  if (score <= 2) return { label: 'Fair', color: 'bg-orange-500', width: '40%' };
-  if (score <= 3) return { label: 'Good', color: 'bg-amber-500', width: '60%' };
-  if (score <= 4) return { label: 'Strong', color: 'bg-primary-500', width: '80%' };
-  return { label: 'Very Strong', color: 'bg-primary-400', width: '100%' };
-}
 
 export default function LoginModal() {
   const [isRegister, setIsRegister] = useState(false);
@@ -33,28 +17,33 @@ export default function LoginModal() {
   const [displayName, setDisplayName] = useState('');
   const [currency, setCurrency] = useState('PHP');
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const passwordStrength = useMemo(() => getPasswordStrength(password), [password]);
   
-  const { login, register, resetPassword, user } = useAuthStore();
-  const { isLoginModalOpen, setLoginModalOpen } = useUIStore();
+  const { login, register, resetPassword } = useAuthStore();
+  const { isLoginModalOpen, setLoginModalOpen, loginModalMode } = useUIStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isLoginModalOpen) {
+      setIsRegister(loginModalMode === 'register');
+    }
+  }, [isLoginModalOpen, loginModalMode]);
 
   const handleClose = () => {
     setLoginModalOpen(false);
-    setIsRegister(false);
-    setEmail('');
-    setPassword('');
-    setConfirmPassword('');
-    setDisplayName('');
-    setCurrency('PHP');
+    setTimeout(() => {
+      setEmail('');
+      setPassword('');
+      setConfirmPassword('');
+      setDisplayName('');
+      setCurrency('PHP');
+    }, 300);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, type: 'login' | 'register') => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      if (isRegister) {
+      if (type === 'register') {
         if (password !== confirmPassword) {
           toast.error('Passwords do not match. Please try again.');
           setIsLoading(false);
@@ -65,7 +54,6 @@ export default function LoginModal() {
         toast.success(`Welcome, ${name}! Your account is ready 🎉`);
       } else {
         await login(email, password);
-        // user is set in store after login resolves
         const storedUser = useAuthStore.getState().user;
         const name = storedUser?.displayName?.split(' ')[0] || storedUser?.email?.split('@')[0] || '';
         toast.success(name ? `Welcome back, ${name}! 👋` : 'Welcome back!');
@@ -86,12 +74,6 @@ export default function LoginModal() {
         errorMessage = 'Password is too weak. Please use at least 6 characters.';
       } else if (code === 'auth/invalid-email') {
         errorMessage = 'Please enter a valid email address.';
-      } else if (code === 'auth/too-many-requests') {
-        errorMessage = 'Too many failed attempts. Please try again later.';
-      } else if (code === 'auth/operation-not-allowed') {
-        errorMessage = 'Email/Password sign-in is not enabled. Contact support.';
-      } else if (err.message && err.message.includes('502')) {
-        errorMessage = 'Unable to connect to the server. Please try again later.';
       }
       toast.error(errorMessage);
     } finally {
@@ -118,6 +100,9 @@ export default function LoginModal() {
     return () => setMounted(false);
   }, []);
 
+  const inputClass = "w-full pl-11 pr-4 py-3 rounded-xl bg-black/20 border border-white/[0.08] text-white text-sm placeholder-white/30 focus:outline-none focus:border-[#5c7cfa] focus:bg-white/[0.03] transition-all";
+  const iconClass = "absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40";
+
   const modalContent = (
     <AnimatePresence>
       {isLoginModalOpen && (
@@ -127,217 +112,224 @@ export default function LoginModal() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-md"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm"
             onClick={handleClose}
           />
 
-          {/* Scroll container — keeps modal above keyboard on mobile */}
-          <div className="flex min-h-full items-center justify-center p-4 sm:p-6 py-8">
-          {/* Modal Container */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 30 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 30 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="relative w-full max-w-4xl flex flex-col md:flex-row z-10 overflow-hidden rounded-[2rem] shadow-2xl border border-white/10 dark:border-dark-500/50"
-          >
-            {/* Left Side (Branding/Hero) */}
-            <div className="hidden md:flex md:w-5/12 relative flex-col justify-between p-10 bg-gradient-to-br from-primary-600 via-primary-700 to-dark-900 text-white overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-accent-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-              <div className="absolute bottom-0 left-0 w-64 h-64 bg-amber-400/15 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
-              
-              <div className="relative z-10">
-                <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center mb-6 border border-white/20 shadow-lg">
-                  <span className="text-white font-bold text-2xl font-display">A</span>
-                </div>
-                <h2 className="text-4xl font-display font-bold mb-4 leading-tight">
-                  {isRegister ? 'Join the\nProductivity\nRevolution.' : 'Welcome\nBack to\nLifeSync.'}
-                </h2>
-                <p className="text-primary-100 text-lg">
-                  {isRegister 
-                    ? 'Create your account to unlock all premium features and organize your daily life.' 
-                    : 'We missed you! Log in to pick up right where you left off.'}
-                </p>
-              </div>
-
-              <div className="relative z-10">
-                <p className="text-sm text-primary-200">
-                  Built by <span className="text-white font-medium">Aaron M. Cañada</span>
-                </p>
-              </div>
-            </div>
-
-            {/* Right Side (Form) */}
-            <div className="flex-1 p-8 sm:p-10 relative bg-white dark:bg-dark-800">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="relative w-full max-w-[850px] min-h-[580px] rounded-[2rem] shadow-2xl overflow-hidden"
+              style={{ background: '#0e0e1a', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              {/* Close Button */}
               <button
                 onClick={handleClose}
-                className="absolute top-6 right-6 p-2 rounded-full bg-gray-100 dark:bg-dark-600 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
+                className="absolute top-5 right-5 z-50 p-2 rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-colors"
               >
                 <HiOutlineX className="w-5 h-5" />
               </button>
 
-              <div className="max-w-sm mx-auto mt-4">
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 font-display">
-                  {isRegister ? 'Create Account' : 'Sign In'}
-                </h3>
-                <p className="text-gray-500 dark:text-gray-400 mb-8">
-                  {isRegister ? 'Fill in your details below to get started.' : 'Enter your email and password to access your dashboard.'}
-                </p>
-
-                <form onSubmit={handleSubmit} className="space-y-5">
-                  {isRegister && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Full Name</label>
+              {/* ===== DESKTOP LAYOUT (SLIDING PANELS) ===== */}
+              <div className="hidden md:block w-full h-full relative min-h-[580px]">
+                
+                {/* 1. Sign In Form (Left Half) */}
+                <div className={`absolute top-0 left-0 w-1/2 h-full flex flex-col justify-center p-10 transition-all duration-500 ease-in-out ${isRegister ? 'opacity-0 translate-x-12 pointer-events-none' : 'opacity-100 translate-x-0 z-10'}`}>
+                  <div className="w-full max-w-[320px] mx-auto text-center">
+                    <h2 className="text-3xl font-bold text-white mb-2 tracking-tight">Sign in to LifeSync</h2>
+                    <p className="text-sm text-white/40 mb-8">use your email account:</p>
+                    <form onSubmit={(e) => handleSubmit(e, 'login')} className="space-y-4">
                       <div className="relative">
-                        <HiOutlineUser className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
-                        <input
-                          type="text"
-                          placeholder="e.g. Aaron M. Cañada"
-                          value={displayName}
-                          onChange={(e) => setDisplayName(e.target.value)}
-                          className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-200 dark:border-dark-600 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 transition-all"
-                          required={isRegister}
-                        />
+                        <HiOutlineMail className={iconClass} />
+                        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} required />
                       </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email Address</label>
-                    <div className="relative">
-                      <HiOutlineMail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
-                      <input
-                        type="email"
-                        placeholder="you@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-200 dark:border-dark-600 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 transition-all"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Password</label>
-                    <div className="relative">
-                      <HiOutlineLockClosed className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full pl-11 pr-12 py-3 rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-200 dark:border-dark-600 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 transition-all"
-                        required
-                        minLength={6}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                        tabIndex={-1}
-                      >
-                        {showPassword ? <HiOutlineEyeOff className="w-5 h-5" /> : <HiOutlineEye className="w-5 h-5" />}
+                      <div className="relative">
+                        <HiOutlineLockClosed className={iconClass} />
+                        <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} required />
+                      </div>
+                      <div className="pt-1 pb-4">
+                        <button type="button" onClick={handleResetPassword} className="text-xs font-medium text-white/40 hover:text-white transition-colors">
+                          Forgot your password?
+                        </button>
+                      </div>
+                      <button type="submit" disabled={isLoading} className="w-full py-3.5 rounded-full bg-[#5c7cfa] hover:bg-[#4c6cf0] text-white font-bold text-sm tracking-widest uppercase shadow-lg shadow-[#5c7cfa]/20 transition-all active:scale-95 disabled:opacity-70">
+                        {isLoading ? 'Wait...' : 'Sign In'}
                       </button>
-                    </div>
-                    {isRegister && password.length > 0 && (
-                      <div className="mt-2">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs text-gray-500 dark:text-gray-400">Password strength</span>
-                          <span className={`text-xs font-semibold ${
-                            passwordStrength.label === 'Weak' ? 'text-rose-500' :
-                            passwordStrength.label === 'Fair' ? 'text-orange-500' :
-                            passwordStrength.label === 'Good' ? 'text-amber-500' :
-                            'text-primary-500'
-                          }`}>{passwordStrength.label}</span>
-                        </div>
-                        <div className="h-1.5 bg-gray-200 dark:bg-dark-600 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all duration-300 ${passwordStrength.color}`}
-                            style={{ width: passwordStrength.width }}
-                          />
-                        </div>
-                      </div>
-                    )}
+                    </form>
                   </div>
+                </div>
 
-                  {isRegister && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Confirm Password</label>
+                {/* 2. Sign Up Form (Right Half) */}
+                <div className={`absolute top-0 right-0 w-1/2 h-full flex flex-col justify-center p-10 transition-all duration-500 ease-in-out ${!isRegister ? 'opacity-0 -translate-x-12 pointer-events-none' : 'opacity-100 translate-x-0 z-10'}`}>
+                  <div className="w-full max-w-[320px] mx-auto text-center">
+                    <h2 className="text-3xl font-bold text-white mb-2 tracking-tight">Create Account</h2>
+                    <p className="text-sm text-white/40 mb-8">use your email for registration:</p>
+                    <form onSubmit={(e) => handleSubmit(e, 'register')} className="space-y-3.5">
                       <div className="relative">
-                        <HiOutlineLockClosed className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
-                        <input
-                          type={showPassword ? 'text' : 'password'}
-                          placeholder="••••••••"
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          className={`w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-dark-900 border ${
-                            confirmPassword && password !== confirmPassword 
-                              ? 'border-rose-500 focus:ring-rose-500/20' 
-                              : 'border-gray-200 dark:border-dark-600 focus:border-primary-500 focus:ring-primary-500/20'
-                          } text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-4 transition-all`}
-                          required
-                          minLength={6}
-                        />
+                        <HiOutlineUser className={iconClass} />
+                        <input type="text" placeholder="Name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className={inputClass} required />
                       </div>
-                      {confirmPassword && password !== confirmPassword && (
-                        <p className="text-rose-500 text-xs mt-1.5 font-medium">Passwords do not match</p>
-                      )}
-                    </div>
-                  )}
-
-                  {isRegister && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Preferred Currency</label>
                       <div className="relative">
-                        <HiOutlineCurrencyDollar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
-                        <select
-                          value={currency}
-                          onChange={(e) => setCurrency(e.target.value)}
-                          className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-200 dark:border-dark-600 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 transition-all appearance-none"
-                        >
+                        <HiOutlineMail className={iconClass} />
+                        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} required />
+                      </div>
+                      <div className="relative">
+                        <HiOutlineLockClosed className={iconClass} />
+                        <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} required minLength={6} />
+                      </div>
+                      <div className="relative">
+                        <HiOutlineLockClosed className={iconClass} />
+                        <input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} required minLength={6} />
+                      </div>
+                      <div className="relative">
+                        <HiOutlineCurrencyDollar className={iconClass} />
+                        <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={`${inputClass} appearance-none cursor-pointer`}>
                           {CURRENCIES.map((c) => (
                             <option key={c.code} value={c.code}>{c.label}</option>
                           ))}
                         </select>
                       </div>
-                    </div>
-                  )}
+                      <div className="pt-3">
+                        <button type="submit" disabled={isLoading} className="w-full py-3.5 rounded-full bg-[#5c7cfa] hover:bg-[#4c6cf0] text-white font-bold text-sm tracking-widest uppercase shadow-lg shadow-[#5c7cfa]/20 transition-all active:scale-95 disabled:opacity-70">
+                          {isLoading ? 'Wait...' : 'Sign Up'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
 
-                  {!isRegister && (
-                    <div className="flex justify-end mt-1">
+                {/* 3. The Sliding Overlay Panel */}
+                <motion.div
+                  initial={false}
+                  animate={{ x: isRegister ? '0%' : '100%' }}
+                  transition={{ type: 'spring', stiffness: 350, damping: 35, ease: 'easeInOut' }}
+                  className="absolute top-0 left-0 w-1/2 h-full z-20 pointer-events-none"
+                  style={{ background: 'linear-gradient(135deg, #5c7cfa 0%, #22b8cf 100%)' }}
+                >
+                  <div className="relative w-full h-full pointer-events-auto">
+                    {/* Overlay Content for Sign Up Mode (Overlay is on Left) */}
+                    <div className={`absolute inset-0 flex flex-col items-center justify-center p-12 text-center text-white transition-opacity duration-300 ${isRegister ? 'opacity-100 delay-150' : 'opacity-0 pointer-events-none'}`}>
+                      <h2 className="text-4xl font-bold mb-4 tracking-tight">Welcome Back!</h2>
+                      <p className="text-white/80 text-sm leading-relaxed mb-10 max-w-[250px]">
+                        To keep connected with us please login with your personal info
+                      </p>
                       <button
-                        type="button"
-                        onClick={handleResetPassword}
-                        className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
+                        onClick={() => setIsRegister(false)}
+                        className="px-12 py-3.5 rounded-full border border-white/40 hover:border-white text-white font-bold text-sm tracking-widest uppercase hover:bg-white/10 transition-colors active:scale-95"
                       >
-                        Forgot your password?
+                        Sign In
                       </button>
                     </div>
-                  )}
 
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full py-3.5 mt-4 rounded-xl font-bold text-white bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-lg shadow-primary-500/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
-                  >
-                    {isLoading ? 'Please wait...' : isRegister ? 'Create My Account' : 'Sign In Now'}
-                  </button>
-                </form>
+                    {/* Overlay Content for Sign In Mode (Overlay is on Right) */}
+                    <div className={`absolute inset-0 flex flex-col items-center justify-center p-12 text-center text-white transition-opacity duration-300 ${!isRegister ? 'opacity-100 delay-150' : 'opacity-0 pointer-events-none'}`}>
+                      <h2 className="text-4xl font-bold mb-4 tracking-tight">Hello, Friend!</h2>
+                      <p className="text-white/80 text-sm leading-relaxed mb-10 max-w-[250px]">
+                        Enter your personal details and start your journey with us
+                      </p>
+                      <button
+                        onClick={() => setIsRegister(true)}
+                        className="px-12 py-3.5 rounded-full border border-white/40 hover:border-white text-white font-bold text-sm tracking-widest uppercase hover:bg-white/10 transition-colors active:scale-95"
+                      >
+                        Sign Up
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
 
-                <div className="mt-8 text-center">
-                  <p className="text-gray-500 dark:text-gray-400">
-                    {isRegister ? 'Already have an account? ' : "Don't have an account yet? "}
-                    <button
-                      onClick={() => setIsRegister(!isRegister)}
-                      className="font-bold text-primary-600 dark:text-primary-400 hover:underline transition-all"
+              </div>
+
+              {/* ===== MOBILE LAYOUT (VERTICAL) ===== */}
+              <div className="md:hidden flex flex-col w-full min-h-[650px] relative">
+                <div className="flex-1 p-8 flex flex-col justify-center relative z-10">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={isRegister ? 'm-reg' : 'm-log'}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                      className="w-full text-center mt-6"
                     >
-                      {isRegister ? 'Sign in here' : 'Sign up for free'}
-                    </button>
+                      <h2 className="text-3xl font-bold text-white mb-2 tracking-tight">
+                        {isRegister ? 'Create Account' : 'Sign in to LifeSync'}
+                      </h2>
+                      <p className="text-sm text-white/40 mb-8">
+                        {isRegister ? 'use your email for registration:' : 'use your email account:'}
+                      </p>
+
+                      <form onSubmit={(e) => handleSubmit(e, isRegister ? 'register' : 'login')} className="space-y-4">
+                        {isRegister && (
+                          <div className="relative">
+                            <HiOutlineUser className={iconClass} />
+                            <input type="text" placeholder="Name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className={inputClass} required />
+                          </div>
+                        )}
+                        <div className="relative">
+                          <HiOutlineMail className={iconClass} />
+                          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} required />
+                        </div>
+                        <div className="relative">
+                          <HiOutlineLockClosed className={iconClass} />
+                          <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} required minLength={6} />
+                        </div>
+                        {isRegister && (
+                          <>
+                            <div className="relative">
+                              <HiOutlineLockClosed className={iconClass} />
+                              <input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} required minLength={6} />
+                            </div>
+                            <div className="relative">
+                              <HiOutlineCurrencyDollar className={iconClass} />
+                              <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={`${inputClass} appearance-none cursor-pointer`}>
+                                {CURRENCIES.map((c) => (
+                                  <option key={c.code} value={c.code}>{c.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </>
+                        )}
+                        {!isRegister && (
+                          <div className="pt-1 pb-2">
+                            <button type="button" onClick={handleResetPassword} className="text-xs font-medium text-white/40 hover:text-white transition-colors">
+                              Forgot your password?
+                            </button>
+                          </div>
+                        )}
+                        <div className="pt-4">
+                          <button type="submit" disabled={isLoading} className="w-full py-3.5 rounded-full bg-[#5c7cfa] hover:bg-[#4c6cf0] text-white font-bold text-sm tracking-widest uppercase shadow-lg shadow-[#5c7cfa]/20 transition-all active:scale-95 disabled:opacity-70">
+                            {isLoading ? 'Wait...' : (isRegister ? 'Sign Up' : 'Sign In')}
+                          </button>
+                        </div>
+                      </form>
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+
+                {/* Mobile Bottom Switcher Panel */}
+                <div 
+                  className="w-full p-8 text-center text-white mt-auto rounded-t-3xl relative z-20"
+                  style={{ background: 'linear-gradient(135deg, #5c7cfa 0%, #22b8cf 100%)' }}
+                >
+                  <h2 className="text-2xl font-bold mb-3 tracking-tight">
+                    {isRegister ? 'Welcome Back!' : 'Hello, Friend!'}
+                  </h2>
+                  <p className="text-white/80 text-sm mb-6">
+                    {isRegister ? 'Already have an account?' : 'Don\'t have an account yet?'}
                   </p>
+                  <button
+                    onClick={() => setIsRegister(!isRegister)}
+                    className="w-full py-3.5 rounded-full border border-white/40 hover:border-white text-white font-bold text-sm tracking-widest uppercase hover:bg-white/10 transition-colors active:scale-95"
+                  >
+                    {isRegister ? 'Sign In' : 'Sign Up'}
+                  </button>
                 </div>
               </div>
-            </div>
-          </motion.div>
+
+            </motion.div>
           </div>
         </div>
       )}
