@@ -64,7 +64,7 @@ export class AuthController {
     try {
       const { email, otp, password, displayName, currency } = req.body;
       const result = await authService.verifyAndRegisterUser(email, otp, password, displayName, currency);
-      res.json({ success: true, ...result });
+      res.json(result);
     } catch (error) { next(error); }
   }
 }

@@ -294,7 +294,7 @@ export default function LoginModal() {
                           {otp.map((digit, idx) => (
                             <input
                               key={idx}
-                              ref={el => otpRefs.current[idx] = el}
+                              ref={el => { otpRefs.current[idx] = el; }}
                               type="text"
                               maxLength={1}
                               value={digit}
@@ -384,7 +384,7 @@ export default function LoginModal() {
                             {signupOtp.map((digit, idx) => (
                               <input
                                 key={idx}
-                                ref={el => signupOtpRefs.current[idx] = el}
+                                ref={el => { signupOtpRefs.current[idx] = el; }}
                                 type="text"
                                 maxLength={1}
                                 value={digit}
