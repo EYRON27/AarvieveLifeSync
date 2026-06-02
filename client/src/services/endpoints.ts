@@ -59,6 +59,12 @@ export const authApi = {
   syncUser: (data: Record<string, unknown>) => api.post('/auth/sync', data),
   getProfile: () => api.get('/auth/profile'),
   updateProfile: (data: Record<string, unknown>) => api.put('/auth/profile', data),
+  requestPasswordResetOTP: (email: string) => api.post('/auth/forgot-password/request-otp', { email }),
+  verifyPasswordResetOTP: (email: string, otp: string) => api.post('/auth/forgot-password/verify-otp', { email, otp }),
+  resetPasswordWithOTP: (email: string, otp: string, newPassword: string) => api.post('/auth/forgot-password/reset', { email, otp, newPassword }),
+  requestSignupOTP: (email: string) => api.post('/auth/signup/request-otp', { email }),
+  verifyAndRegisterUser: (email: string, otp: string, password: string, displayName: string, currency?: string) => 
+    api.post('/auth/signup/verify-and-register', { email, otp, password, displayName, currency }),
 };
 
 // ============ Reports ============

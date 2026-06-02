@@ -6,6 +6,7 @@ import {
   signOut,
   updateProfile,
   sendPasswordResetEmail,
+  sendEmailVerification,
   onAuthStateChanged,
   User as FirebaseUser,
 } from 'firebase/auth';
@@ -20,6 +21,7 @@ interface AuthState {
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, displayName: string, currency?: string) => Promise<void>;
+  registerWithOTP: (email: string, password: string, displayName: string, otp: string, currency?: string) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   setUser: (user: FirebaseUser | null) => void;
@@ -28,7 +30,7 @@ interface AuthState {
   setDbUser: (user: any) => void;
 }
 
-export const useAuthStore = create<AuthState>()((set) => ({
+export const useAuthStore = create<AuthState>()((set, get) => ({
   user: null,
   dbUser: null,
   isLoading: true,
@@ -39,6 +41,12 @@ export const useAuthStore = create<AuthState>()((set) => ({
     try {
       set({ isLoading: true, error: null });
       const cred = await signInWithEmailAndPassword(firebaseAuth, email, password);
+      
+      if (!cred.user.emailVerified) {
+        await signOut(firebaseAuth);
+        throw new Error('Please verify your email before logging in. Check your inbox.');
+      }
+
       try {
         const res = await authApi.syncUser({
           uid: cred.user.uid,
@@ -62,26 +70,42 @@ export const useAuthStore = create<AuthState>()((set) => ({
       const cred = await createUserWithEmailAndPassword(firebaseAuth, email, password);
       await updateProfile(cred.user, { displayName });
       try {
-        let res = await authApi.syncUser({ uid: cred.user.uid, email, displayName, currency: currency || 'USD' });
-
-        // Race condition fix: If onAuthStateChanged created the user first without currency or displayName, update it now
-        const needsCurrencyUpdate = currency && res.data.data.preferences?.currency !== currency;
-        const needsNameUpdate = displayName && res.data.data.displayName !== displayName;
-
-        if (needsCurrencyUpdate || needsNameUpdate) {
-          res = await authApi.updateProfile({
-            displayName: displayName || res.data.data.displayName,
-            preferences: { ...res.data.data.preferences, currency: currency || res.data.data.preferences?.currency }
-          });
-        }
-
+        // Always call syncUser first (may race with onAuthStateChanged)
+        const syncRes = await authApi.syncUser({ uid: cred.user.uid, email, displayName, currency: currency || 'PHP' });
+        // Then always force-update profile to guarantee correct name + currency
+        const existingPrefs = syncRes.data.data?.preferences || {};
+        const res = await authApi.updateProfile({
+          displayName,
+          preferences: { ...existingPrefs, currency: currency || 'PHP' }
+        });
         set({ dbUser: res.data.data });
       } catch {
         // Backend sync failed, but Firebase auth succeeded — continue
       }
-      set({ user: cred.user, isAuthenticated: true, isLoading: false });
+
+      await sendEmailVerification(cred.user);
+      await signOut(firebaseAuth);
+
+      set({ user: null, isAuthenticated: false, isLoading: false });
     } catch (err: any) {
       set({ error: err.message || 'Registration failed', isLoading: false });
+      throw err;
+    }
+  },
+
+  registerWithOTP: async (email, password, displayName, otp, currency) => {
+    try {
+      set({ isLoading: true, error: null });
+      // Call backend to verify OTP and create user using Firebase Admin SDK
+      await authApi.verifyAndRegisterUser(email, otp, password, displayName, currency);
+      
+      // Wait for Firebase replication
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // User is created and verified on backend, now just login normally
+      await get().login(email, password);
+    } catch (err: any) {
+      set({ error: err.response?.data?.message || err.message || 'Registration failed', isLoading: false });
       throw err;
     }
   },
@@ -110,6 +134,12 @@ export const useAuthStore = create<AuthState>()((set) => ({
   initializeAuth: () => {
     const unsubscribe = onAuthStateChanged(firebaseAuth, async (user) => {
       if (user) {
+        if (!user.emailVerified) {
+          await signOut(firebaseAuth);
+          set({ user: null, isAuthenticated: false, isLoading: false });
+          return;
+        }
+
         try {
           const res = await authApi.syncUser({
             uid: user.uid,
@@ -120,8 +150,10 @@ export const useAuthStore = create<AuthState>()((set) => ({
         } catch {
           // Backend may be unreachable during dev
         }
+        set({ user, isAuthenticated: true, isLoading: false });
+      } else {
+        set({ user: null, isAuthenticated: false, isLoading: false });
       }
-      set({ user, isAuthenticated: !!user, isLoading: false });
     });
     return unsubscribe;
   },

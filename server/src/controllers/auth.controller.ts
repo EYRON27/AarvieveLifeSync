@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { userService } from '../services';
+import { userService, authService } from '../services';
 
 export class AuthController {
   async syncUser(req: Request, res: Response, next: NextFunction) {
@@ -26,6 +26,45 @@ export class AuthController {
     try {
       const user = await userService.updateUser(req.userId!, req.body);
       res.json({ success: true, data: user });
+    } catch (error) { next(error); }
+  }
+
+  async requestPasswordResetOTP(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email } = req.body;
+      const result = await authService.requestPasswordResetOTP(email);
+      res.json({ success: true, ...result });
+    } catch (error) { next(error); }
+  }
+
+  async verifyPasswordResetOTP(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, otp } = req.body;
+      const result = await authService.verifyPasswordResetOTP(email, otp);
+      res.json({ success: true, ...result });
+    } catch (error) { next(error); }
+  }
+
+  async resetPasswordWithOTP(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, otp, newPassword } = req.body;
+      const result = await authService.resetPasswordWithOTP(email, otp, newPassword);
+      res.json({ success: true, ...result });
+    } catch (error) { next(error); }
+  }
+  async requestSignupOTP(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email } = req.body;
+      const result = await authService.requestSignupOTP(email);
+      res.json({ success: true, ...result });
+    } catch (error) { next(error); }
+  }
+
+  async verifyAndRegisterUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, otp, password, displayName, currency } = req.body;
+      const result = await authService.verifyAndRegisterUser(email, otp, password, displayName, currency);
+      res.json(result);
     } catch (error) { next(error); }
   }
 }
