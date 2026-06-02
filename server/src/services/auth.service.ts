@@ -26,9 +26,7 @@ export class AuthService {
       // Send Real Email if Configured
       if (smtpUser && smtpPass) {
         const transporter = nodemailer.createTransport({
-          host: 'smtp.gmail.com',
-          port: 465,
-          secure: true, // Use SSL
+          service: 'gmail',
           auth: {
             user: smtpUser,
             pass: smtpPass,
@@ -131,9 +129,7 @@ export class AuthService {
 
     if (smtpUser && smtpPass) {
       const transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true, // Use SSL
+        service: 'gmail',
         auth: {
           user: smtpUser,
           pass: smtpPass,
