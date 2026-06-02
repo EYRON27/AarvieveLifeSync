@@ -207,7 +207,7 @@ export default function SettingsPage() {
                     This action is <span className="font-bold text-red-400">irreversible</span>. This will permanently delete your account and remove all your data from our servers.
                   </p>
                   <p className="text-sm text-white/70 mb-4">
-                    Please type <strong className="text-white select-all">Delete my Account</strong> to confirm.
+                    Please type <strong className="text-white select-all">"Delete my Account"</strong> to confirm.
                   </p>
                   <input
                     type="text"
