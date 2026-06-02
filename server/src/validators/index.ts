@@ -133,6 +133,7 @@ export const updateUserSchema = z.object({
       timezone: z.string().max(100).optional(),
       dailyCalorieGoal: z.number().positive().optional(),
       weeklyBudget: z.number().positive().optional(),
+      hasAcceptedDashboardTerms: z.boolean().optional(),
     })
     .optional(),
 });
