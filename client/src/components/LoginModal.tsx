@@ -20,6 +20,7 @@ export default function LoginModal() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   
   // OTP Flow State
   const [forgotPasswordStep, setForgotPasswordStep] = useState<'none' | 'email' | 'otp' | 'new-password'>('none');
@@ -82,7 +83,7 @@ export default function LoginModal() {
         if (!/[^A-Za-z0-9]/.test(password)) passwordErrors.push('a special character');
 
         if (passwordErrors.length > 0) {
-          toast.error(`Password must contain: ${passwordErrors.join(', ')}`);
+          toast.error('Your password is not strong enough. Please check the requirements below.', { id: 'pwd-error' });
           setIsLoading(false);
           return;
         }
@@ -176,7 +177,7 @@ export default function LoginModal() {
     if (!/[^A-Za-z0-9]/.test(password)) passwordErrors.push('a special character');
 
     if (passwordErrors.length > 0) {
-      toast.error(`Password must contain: ${passwordErrors.join(', ')}`);
+      toast.error('Your password is not strong enough. Please check the requirements below.', { id: 'pwd-error' });
       return;
     }
     setIsLoading(true);
@@ -340,14 +341,32 @@ export default function LoginModal() {
                         <p className="text-sm text-white/60 mb-6">Enter your new password below.</p>
                         <div className="relative">
                           <HiOutlineLockClosed className={iconClass} />
-                          <input type={showPassword ? 'text' : 'password'} placeholder="New Password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} required minLength={8} />
+                          <input 
+                            type={showPassword ? 'text' : 'password'} 
+                            placeholder="New Password" 
+                            value={password} 
+                            onChange={(e) => setPassword(e.target.value)}
+                            onFocus={() => setIsPasswordFocused(true)}
+                            onBlur={() => setIsPasswordFocused(false)}
+                            className={inputClass} 
+                            required 
+                          />
                           <button type="button" tabIndex={-1} onClick={() => setShowPassword(v => !v)} className={eyeClass}>
                             {showPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
                           </button>
                         </div>
-                        <div className="relative">
+                        {isPasswordFocused && (
+                          <div className="mt-3 text-left text-[11px] leading-relaxed text-white/50 bg-black/20 p-3 rounded-xl border border-white/5">
+                            Password must contain at least <span className={password.length >= 8 ? 'text-[#10b981] font-medium' : 'text-white/70'}>8 characters</span>, 
+                            {' '}<span className={/[A-Z]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>an uppercase letter</span>, 
+                            {' '}<span className={/[a-z]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>a lowercase letter</span>, 
+                            {' '}<span className={/[0-9]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>a number</span>, 
+                            and <span className={/[^A-Za-z0-9]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>a special character</span>.
+                          </div>
+                        )}
+                        <div className="relative mt-4">
                           <HiOutlineLockClosed className={iconClass} />
-                          <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm New Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} required minLength={8} />
+                          <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm New Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} required />
                           <button type="button" tabIndex={-1} onClick={() => setShowConfirmPassword(v => !v)} className={eyeClass}>
                             {showConfirmPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
                           </button>
@@ -439,14 +458,32 @@ export default function LoginModal() {
                           </div>
                           <div className="relative">
                             <HiOutlineLockClosed className={iconClass} />
-                            <input type={showPassword ? 'text' : 'password'} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} required minLength={8} />
+                            <input 
+                              type={showPassword ? 'text' : 'password'} 
+                              placeholder="Password" 
+                              value={password} 
+                              onChange={(e) => setPassword(e.target.value)}
+                              onFocus={() => setIsPasswordFocused(true)}
+                              onBlur={() => setIsPasswordFocused(false)}
+                              className={inputClass} 
+                              required 
+                            />
                             <button type="button" tabIndex={-1} onClick={() => setShowPassword(v => !v)} className={eyeClass}>
                               {showPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
                             </button>
                           </div>
-                          <div className="relative">
+                          {isPasswordFocused && (
+                            <div className="mt-3 text-left text-[11px] leading-relaxed text-white/50 bg-black/20 p-3 rounded-xl border border-white/5">
+                              Password must contain at least <span className={password.length >= 8 ? 'text-[#10b981] font-medium' : 'text-white/70'}>8 characters</span>, 
+                              {' '}<span className={/[A-Z]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>an uppercase letter</span>, 
+                              {' '}<span className={/[a-z]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>a lowercase letter</span>, 
+                              {' '}<span className={/[0-9]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>a number</span>, 
+                              and <span className={/[^A-Za-z0-9]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>a special character</span>.
+                            </div>
+                          )}
+                          <div className="relative mt-4">
                             <HiOutlineLockClosed className={iconClass} />
-                            <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} required minLength={8} />
+                            <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} required />
                             <button type="button" tabIndex={-1} onClick={() => setShowConfirmPassword(v => !v)} className={eyeClass}>
                               {showConfirmPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
                             </button>
@@ -556,16 +593,34 @@ export default function LoginModal() {
                         </div>
                         <div className="relative">
                           <HiOutlineLockClosed className={iconClass} />
-                          <input type={showPassword ? 'text' : 'password'} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} required minLength={8} />
+                          <input 
+                            type={showPassword ? 'text' : 'password'} 
+                            placeholder="Password" 
+                            value={password} 
+                            onChange={(e) => setPassword(e.target.value)}
+                            onFocus={() => setIsPasswordFocused(true)}
+                            onBlur={() => setIsPasswordFocused(false)}
+                            className={inputClass} 
+                            required 
+                          />
                           <button type="button" tabIndex={-1} onClick={() => setShowPassword(v => !v)} className={eyeClass}>
                             {showPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
                           </button>
                         </div>
+                        {isRegister && isPasswordFocused && (
+                          <div className="mt-3 text-left text-[11px] leading-relaxed text-white/50 bg-black/20 p-3 rounded-xl border border-white/5">
+                            Password must contain at least <span className={password.length >= 8 ? 'text-[#10b981] font-medium' : 'text-white/70'}>8 characters</span>, 
+                            {' '}<span className={/[A-Z]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>an uppercase letter</span>, 
+                            {' '}<span className={/[a-z]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>a lowercase letter</span>, 
+                            {' '}<span className={/[0-9]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>a number</span>, 
+                            and <span className={/[^A-Za-z0-9]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>a special character</span>.
+                          </div>
+                        )}
                         {isRegister && (
                           <>
-                            <div className="relative">
+                            <div className="relative mt-4">
                               <HiOutlineLockClosed className={iconClass} />
-                              <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} required minLength={8} />
+                              <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} required />
                               <button type="button" tabIndex={-1} onClick={() => setShowConfirmPassword(v => !v)} className={eyeClass}>
                                 {showConfirmPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
                               </button>
