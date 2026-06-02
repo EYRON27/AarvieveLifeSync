@@ -35,6 +35,9 @@ export class UserRepository {
     const updated = await this.collection.doc(uid).get();
     return { uid: updated.id, ...updated.data() } as User;
   }
+  async delete(uid: string): Promise<void> {
+    await this.collection.doc(uid).delete();
+  }
 }
 
 export const userRepository = new UserRepository();

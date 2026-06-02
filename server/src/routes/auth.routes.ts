@@ -8,6 +8,7 @@ const router = Router();
 router.post('/sync', authMiddleware, (req, res, next) => authController.syncUser(req, res, next));
 router.get('/profile', authMiddleware, (req, res, next) => authController.getProfile(req, res, next));
 router.put('/profile', authMiddleware, validate(updateUserSchema), (req, res, next) => authController.updateProfile(req, res, next));
+router.delete('/profile', authMiddleware, (req, res, next) => authController.deleteAccount(req, res, next));
 
 // OTP Password Reset Routes (No authMiddleware)
 router.post('/forgot-password/request-otp', (req, res, next) => authController.requestPasswordResetOTP(req, res, next));

@@ -29,6 +29,13 @@ export class AuthController {
     } catch (error) { next(error); }
   }
 
+  async deleteAccount(req: Request, res: Response, next: NextFunction) {
+    try {
+      await userService.deleteUser(req.userId!);
+      res.json({ success: true, message: 'Account deleted successfully' });
+    } catch (error) { next(error); }
+  }
+
   async requestPasswordResetOTP(req: Request, res: Response, next: NextFunction) {
     try {
       const { email } = req.body;
