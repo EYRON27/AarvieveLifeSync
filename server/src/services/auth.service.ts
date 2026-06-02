@@ -20,18 +20,23 @@ export class AuthService {
         expiresAt: expiresAt.toISOString(),
       });
 
+      const smtpUser = process.env.SMTP_USER || 'aaroncanada4@gmail.com';
+      const smtpPass = process.env.SMTP_PASS || 'dwupofalorlseitx';
+
       // Send Real Email if Configured
-      if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+      if (smtpUser && smtpPass) {
         const transporter = nodemailer.createTransport({
-          service: 'gmail', // You can change this if you use another provider
+          host: 'smtp.gmail.com',
+          port: 465,
+          secure: true, // Use SSL
           auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
+            user: smtpUser,
+            pass: smtpPass,
           },
         });
 
         await transporter.sendMail({
-          from: `"LifeSync" <${process.env.SMTP_USER}>`,
+          from: `"LifeSync" <${smtpUser}>`,
           to: email,
           subject: 'Your Password Reset OTP - LifeSync',
           html: `
@@ -121,17 +126,22 @@ export class AuthService {
       expiresAt: expiresAt.toISOString(),
     });
 
-    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+    const smtpUser = process.env.SMTP_USER || 'aaroncanada4@gmail.com';
+    const smtpPass = process.env.SMTP_PASS || 'dwupofalorlseitx';
+
+    if (smtpUser && smtpPass) {
       const transporter = nodemailer.createTransport({
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true, // Use SSL
         auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
+          user: smtpUser,
+          pass: smtpPass,
         },
       });
 
       await transporter.sendMail({
-        from: `"LifeSync" <${process.env.SMTP_USER}>`,
+        from: `"LifeSync" <${smtpUser}>`,
         to: email,
         subject: 'Verify your email - LifeSync',
         html: `
