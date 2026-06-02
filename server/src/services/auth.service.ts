@@ -85,6 +85,10 @@ export class AuthService {
   }
 
   async resetPasswordWithOTP(email: string, otp: string, newPassword: string) {
+    if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[^A-Za-z0-9]/.test(newPassword)) {
+      throw new BadRequestError('Password must be at least 8 characters and contain uppercase, lowercase, number, and special character');
+    }
+
     // Re-verify the OTP just to be safe
     const { uid } = await this.verifyPasswordResetOTP(email, otp);
     
@@ -161,6 +165,10 @@ export class AuthService {
     if (data.otp !== otp || data.uid !== 'signup') throw new BadRequestError('Invalid OTP');
     
     if (new Date(data.expiresAt) < new Date()) throw new BadRequestError('OTP has expired');
+
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+      throw new BadRequestError('Password must be at least 8 characters and contain uppercase, lowercase, number, and special character');
+    }
 
     // 1. Create user in Firebase Admin with emailVerified: true
     const userRecord = await auth.createUser({
