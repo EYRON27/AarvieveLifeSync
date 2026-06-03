@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { HiOutlineCog, HiOutlineUser, HiOutlineMoon, HiOutlineSun, HiOutlineCurrencyDollar } from 'react-icons/hi';
+import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { HiOutlineCog, HiOutlineUser, HiOutlineMoon, HiOutlineSun, HiOutlineCurrencyDollar, HiOutlineTrash, HiOutlineExclamationCircle } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
@@ -18,6 +20,12 @@ export default function SettingsPage() {
   const [currency, setCurrency] = useState(dbUser?.preferences?.currency || 'USD');
   const [saving, setSaving] = useState(false);
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const navigate = useNavigate();
+  const { logout } = useAuthStore();
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -25,14 +33,14 @@ export default function SettingsPage() {
       const preferences = { ...dbUser?.preferences, currency };
       const res = await authApi.updateProfile({ displayName, preferences });
       setDbUser(res.data.data);
-      
+
       // Update Firebase Auth profile
       if (firebaseAuth.currentUser) {
         await updateProfile(firebaseAuth.currentUser, { displayName });
         // Force Zustand update to trigger UI re-render with a cloned reference
         setUser({ ...firebaseAuth.currentUser } as any);
       }
-      
+
       // Invalidate queries that might depend on currency
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-activity'] });
@@ -41,6 +49,22 @@ export default function SettingsPage() {
       toast.error('Failed to update');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmation !== 'Delete my Account') return;
+    setDeleting(true);
+    try {
+      await authApi.deleteAccount();
+      toast.success('Account deleted successfully.');
+      setShowDeleteModal(false);
+      logout();
+      navigate('/');
+    } catch (e) {
+      toast.error('Failed to delete account. Please try again.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -80,7 +104,7 @@ export default function SettingsPage() {
               <label className="text-sm font-medium text-gray-700 dark:text-dark-100 mb-1 block">Email</label>
               <input type="email" value={user?.email || ''} disabled className="input-field opacity-60" />
             </div>
-            
+
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-dark-100 mb-1 block">Preferred Currency</label>
               <div className="relative">
@@ -133,7 +157,89 @@ export default function SettingsPage() {
             Built with React, Express, Firebase, and love ❤️
           </p>
         </motion.div>
+
+        {/* Danger Zone */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card p-6 border-red-500/20">
+          <div className="flex items-center gap-3 mb-4">
+            <HiOutlineTrash className="w-5 h-5 text-red-500" />
+            <h2 className="text-lg font-semibold text-red-500">Danger Zone</h2>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-dark-200 mb-4">
+            Once you delete your account, there is no going back. Please be certain.
+          </p>
+          <button
+            onClick={() => {
+              setDeleteConfirmation('');
+              setShowDeleteModal(true);
+            }}
+            className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 font-semibold rounded-lg transition-colors border border-red-500/20"
+          >
+            Delete my Account
+          </button>
+        </motion.div>
       </div>
+
+      {/* Delete Account Modal */}
+      {createPortal(
+        <AnimatePresence>
+          {showDeleteModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                className="bg-[#1a1a2e] border border-red-500/20 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl relative flex flex-col"
+              >
+                <div className="p-6 border-b border-white/10 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                    <HiOutlineExclamationCircle className="w-6 h-6 text-red-500" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white tracking-tight">Delete Account</h3>
+                </div>
+
+                <div className="p-6">
+                  <p className="text-sm text-white/70 mb-4">
+                    This action is <span className="font-bold text-red-400">irreversible</span>. This will permanently delete your account and remove all your data from our servers.
+                  </p>
+                  <p className="text-sm text-white/70 mb-4">
+                    Please type <strong className="text-white select-all">"Delete my Account"</strong> to confirm.
+                  </p>
+                  <input
+                    type="text"
+                    value={deleteConfirmation}
+                    onChange={(e) => setDeleteConfirmation(e.target.value)}
+                    placeholder="Delete my Account"
+                    className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-white focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all placeholder:text-white/20"
+                  />
+                </div>
+
+                <div className="p-4 border-t border-white/10 bg-black/20 flex items-center justify-end gap-3">
+                  <button
+                    onClick={() => setShowDeleteModal(false)}
+                    disabled={deleting}
+                    className="px-5 py-2.5 rounded-xl font-semibold text-white/70 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteAccount}
+                    disabled={deleteConfirmation !== 'Delete my Account' || deleting}
+                    className="px-5 py-2.5 rounded-xl font-bold bg-red-500 hover:bg-red-600 disabled:bg-red-500/30 disabled:text-white/40 text-white transition-all shadow-lg shadow-red-500/20"
+                  >
+                    {deleting ? 'Deleting...' : 'Confirm'}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 }

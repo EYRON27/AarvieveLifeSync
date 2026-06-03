@@ -18,6 +18,9 @@ export default function LoginModal() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   
   // OTP Flow State
   const [forgotPasswordStep, setForgotPasswordStep] = useState<'none' | 'email' | 'otp' | 'new-password'>('none');
@@ -48,6 +51,7 @@ export default function LoginModal() {
       setDisplayName('');
       setShowPassword(false);
       setShowConfirmPassword(false);
+      setAgreeToTerms(false);
       setForgotPasswordStep('none');
       setOtp(['', '', '', '', '', '']);
       setSignupStep('details');
@@ -60,13 +64,26 @@ export default function LoginModal() {
     setIsLoading(true);
     try {
       if (type === 'register') {
+        if (!agreeToTerms) {
+          toast.error('You must agree to the Terms of Service and Privacy Policy.');
+          setIsLoading(false);
+          return;
+        }
         if (password !== confirmPassword) {
           toast.error('Passwords do not match. Please try again.');
           setIsLoading(false);
           return;
         }
-        if (password.length < 6) {
-          toast.error('Password must be at least 6 characters');
+        
+        const passwordErrors = [];
+        if (password.length < 8) passwordErrors.push('at least 8 characters');
+        if (!/[A-Z]/.test(password)) passwordErrors.push('an uppercase letter');
+        if (!/[a-z]/.test(password)) passwordErrors.push('a lowercase letter');
+        if (!/[0-9]/.test(password)) passwordErrors.push('a number');
+        if (!/[^A-Za-z0-9]/.test(password)) passwordErrors.push('a special character');
+
+        if (passwordErrors.length > 0) {
+          toast.error('Your password is not strong enough. Please check the requirements below.', { id: 'pwd-error' });
           setIsLoading(false);
           return;
         }
@@ -151,8 +168,16 @@ export default function LoginModal() {
       toast.error('Passwords do not match');
       return;
     }
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters');
+
+    const passwordErrors = [];
+    if (password.length < 8) passwordErrors.push('at least 8 characters');
+    if (!/[A-Z]/.test(password)) passwordErrors.push('an uppercase letter');
+    if (!/[a-z]/.test(password)) passwordErrors.push('a lowercase letter');
+    if (!/[0-9]/.test(password)) passwordErrors.push('a number');
+    if (!/[^A-Za-z0-9]/.test(password)) passwordErrors.push('a special character');
+
+    if (passwordErrors.length > 0) {
+      toast.error('Your password is not strong enough. Please check the requirements below.', { id: 'pwd-error' });
       return;
     }
     setIsLoading(true);
@@ -316,14 +341,32 @@ export default function LoginModal() {
                         <p className="text-sm text-white/60 mb-6">Enter your new password below.</p>
                         <div className="relative">
                           <HiOutlineLockClosed className={iconClass} />
-                          <input type={showPassword ? 'text' : 'password'} placeholder="New Password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} required minLength={6} />
+                          <input 
+                            type={showPassword ? 'text' : 'password'} 
+                            placeholder="New Password" 
+                            value={password} 
+                            onChange={(e) => setPassword(e.target.value)}
+                            onFocus={() => setIsPasswordFocused(true)}
+                            onBlur={() => setIsPasswordFocused(false)}
+                            className={inputClass} 
+                            required 
+                          />
                           <button type="button" tabIndex={-1} onClick={() => setShowPassword(v => !v)} className={eyeClass}>
                             {showPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
                           </button>
                         </div>
-                        <div className="relative">
+                        {isPasswordFocused && (
+                          <div className="mt-3 text-left text-[11px] leading-relaxed text-white/50 bg-black/20 p-3 rounded-xl border border-white/5">
+                            Password must contain at least <span className={password.length >= 8 ? 'text-[#10b981] font-medium' : 'text-white/70'}>8 characters</span>, 
+                            {' '}<span className={/[A-Z]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>an uppercase letter</span>, 
+                            {' '}<span className={/[a-z]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>a lowercase letter</span>, 
+                            {' '}<span className={/[0-9]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>a number</span>, 
+                            and <span className={/[^A-Za-z0-9]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>a special character</span>.
+                          </div>
+                        )}
+                        <div className="relative mt-4">
                           <HiOutlineLockClosed className={iconClass} />
-                          <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm New Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} required minLength={6} />
+                          <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm New Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} required />
                           <button type="button" tabIndex={-1} onClick={() => setShowConfirmPassword(v => !v)} className={eyeClass}>
                             {showConfirmPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
                           </button>
@@ -415,18 +458,57 @@ export default function LoginModal() {
                           </div>
                           <div className="relative">
                             <HiOutlineLockClosed className={iconClass} />
-                            <input type={showPassword ? 'text' : 'password'} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} required minLength={6} />
+                            <input 
+                              type={showPassword ? 'text' : 'password'} 
+                              placeholder="Password" 
+                              value={password} 
+                              onChange={(e) => setPassword(e.target.value)}
+                              onFocus={() => setIsPasswordFocused(true)}
+                              onBlur={() => setIsPasswordFocused(false)}
+                              className={inputClass} 
+                              required 
+                            />
                             <button type="button" tabIndex={-1} onClick={() => setShowPassword(v => !v)} className={eyeClass}>
                               {showPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
                             </button>
                           </div>
-                          <div className="relative">
+                          {isPasswordFocused && (
+                            <div className="mt-3 text-left text-[11px] leading-relaxed text-white/50 bg-black/20 p-3 rounded-xl border border-white/5">
+                              Password must contain at least <span className={password.length >= 8 ? 'text-[#10b981] font-medium' : 'text-white/70'}>8 characters</span>, 
+                              {' '}<span className={/[A-Z]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>an uppercase letter</span>, 
+                              {' '}<span className={/[a-z]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>a lowercase letter</span>, 
+                              {' '}<span className={/[0-9]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>a number</span>, 
+                              and <span className={/[^A-Za-z0-9]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>a special character</span>.
+                            </div>
+                          )}
+                          <div className="relative mt-4">
                             <HiOutlineLockClosed className={iconClass} />
-                            <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} required minLength={6} />
+                            <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} required />
                             <button type="button" tabIndex={-1} onClick={() => setShowConfirmPassword(v => !v)} className={eyeClass}>
                               {showConfirmPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
                             </button>
                           </div>
+                          
+                          <div className="flex items-start mt-2">
+                            <div className="flex items-center h-5">
+                              <div 
+                                onClick={() => setAgreeToTerms(!agreeToTerms)}
+                                className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer transition-colors ${agreeToTerms ? 'bg-[#5c7cfa] border-[#5c7cfa]' : 'bg-black/20 border-white/20'}`}
+                              >
+                                {agreeToTerms && (
+                                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </div>
+                            </div>
+                            <div className="ml-2 text-left text-xs text-white/70">
+                              <span onClick={() => setAgreeToTerms(!agreeToTerms)} className="cursor-pointer">I agree to the </span>
+                              <button type="button" onClick={() => setShowTermsModal(true)} className="text-[#5c7cfa] hover:underline font-medium focus:outline-none">Terms of Service</button>
+                              <span onClick={() => setAgreeToTerms(!agreeToTerms)} className="cursor-pointer"> and understand my data is safely encrypted and stored.</span>
+                            </div>
+                          </div>
+
                           <div className="pt-3">
                             <button type="submit" disabled={isLoading} className="w-full py-3.5 rounded-full bg-[#5c7cfa] hover:bg-[#4c6cf0] text-white font-bold text-sm tracking-widest uppercase shadow-lg shadow-[#5c7cfa]/20 transition-all active:scale-95 disabled:opacity-70">
                               {isLoading ? 'Wait...' : 'Sign Up'}
@@ -511,21 +593,58 @@ export default function LoginModal() {
                         </div>
                         <div className="relative">
                           <HiOutlineLockClosed className={iconClass} />
-                          <input type={showPassword ? 'text' : 'password'} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} required minLength={6} />
+                          <input 
+                            type={showPassword ? 'text' : 'password'} 
+                            placeholder="Password" 
+                            value={password} 
+                            onChange={(e) => setPassword(e.target.value)}
+                            onFocus={() => setIsPasswordFocused(true)}
+                            onBlur={() => setIsPasswordFocused(false)}
+                            className={inputClass} 
+                            required 
+                          />
                           <button type="button" tabIndex={-1} onClick={() => setShowPassword(v => !v)} className={eyeClass}>
                             {showPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
                           </button>
                         </div>
+                        {isRegister && isPasswordFocused && (
+                          <div className="mt-3 text-left text-[11px] leading-relaxed text-white/50 bg-black/20 p-3 rounded-xl border border-white/5">
+                            Password must contain at least <span className={password.length >= 8 ? 'text-[#10b981] font-medium' : 'text-white/70'}>8 characters</span>, 
+                            {' '}<span className={/[A-Z]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>an uppercase letter</span>, 
+                            {' '}<span className={/[a-z]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>a lowercase letter</span>, 
+                            {' '}<span className={/[0-9]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>a number</span>, 
+                            and <span className={/[^A-Za-z0-9]/.test(password) ? 'text-[#10b981] font-medium' : 'text-white/70'}>a special character</span>.
+                          </div>
+                        )}
                         {isRegister && (
                           <>
-                            <div className="relative">
+                            <div className="relative mt-4">
                               <HiOutlineLockClosed className={iconClass} />
-                              <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} required minLength={6} />
+                              <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} required />
                               <button type="button" tabIndex={-1} onClick={() => setShowConfirmPassword(v => !v)} className={eyeClass}>
                                 {showConfirmPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
                               </button>
                             </div>
 
+                            <div className="flex items-start mt-2">
+                              <div className="flex items-center h-5">
+                                <div 
+                                  onClick={() => setAgreeToTerms(!agreeToTerms)}
+                                  className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer transition-colors ${agreeToTerms ? 'bg-[#5c7cfa] border-[#5c7cfa]' : 'bg-black/20 border-white/20'}`}
+                                >
+                                  {agreeToTerms && (
+                                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="ml-2 text-left text-xs text-white/70">
+                                <span onClick={() => setAgreeToTerms(!agreeToTerms)} className="cursor-pointer">I agree to the </span>
+                                <button type="button" onClick={() => setShowTermsModal(true)} className="text-[#5c7cfa] hover:underline font-medium focus:outline-none">Terms of Service</button>
+                                <span onClick={() => setAgreeToTerms(!agreeToTerms)} className="cursor-pointer"> and understand my data is safely encrypted and stored.</span>
+                              </div>
+                            </div>
                           </>
                         )}
                         {!isRegister && (
@@ -569,6 +688,58 @@ export default function LoginModal() {
 
             </motion.div>
           </div>
+
+          {/* Terms of Service Modal */}
+          <AnimatePresence>
+            {showTermsModal && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+                onClick={() => setShowTermsModal(false)}
+              >
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-[#1a1a2e] border border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl relative"
+                >
+                  <div className="p-6 border-b border-white/10 flex justify-between items-center">
+                    <h3 className="text-xl font-bold text-white">Terms of Service</h3>
+                    <button onClick={() => setShowTermsModal(false)} className="text-white/50 hover:text-white transition-colors">
+                      <HiOutlineX className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <div className="p-6 max-h-[60vh] overflow-y-auto text-sm text-white/70 space-y-4 custom-scrollbar">
+                    <p>
+                      <strong>1. Data Security & Encryption</strong><br/>
+                      At LifeSync, we prioritize the security of your data. All sensitive information, including your passwords and financial records, are encrypted both in transit and at rest using industry-standard encryption protocols.
+                    </p>
+                    <p>
+                      <strong>2. Privacy</strong><br/>
+                      We will never sell, rent, or share your personal data with third parties. Your data is your own, and we only process it to provide the LifeSync services to you.
+                    </p>
+                    <p>
+                      <strong>3. User Responsibilities</strong><br/>
+                      You are responsible for maintaining the confidentiality of your account password. If you believe your account has been compromised, you must notify us immediately.
+                    </p>
+                    <p>
+                      <strong>4. Account Termination</strong><br/>
+                      We reserve the right to terminate or suspend access to our service immediately, without prior notice or liability, for any reason whatsoever, including without limitation if you breach the Terms.
+                    </p>
+                    <p>By creating an account, you acknowledge that you have read and understood these terms and agree to be bound by them.</p>
+                  </div>
+                  <div className="p-4 border-t border-white/10 flex justify-end">
+                    <button onClick={() => { setShowTermsModal(false); setAgreeToTerms(true); }} className="px-6 py-2 bg-[#5c7cfa] hover:bg-[#4c6cf0] text-white rounded-lg font-medium transition-colors">
+                      I Agree & Close
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
     </AnimatePresence>

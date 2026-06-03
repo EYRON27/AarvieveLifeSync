@@ -34,6 +34,17 @@ export class UserService {
   async getUser(uid: string): Promise<User | null> {
     return userRepository.findById(uid);
   }
+
+  async deleteUser(uid: string): Promise<void> {
+    // Delete from Firebase Auth
+    try {
+      await auth.deleteUser(uid);
+    } catch (e: any) {
+      if (e.code !== 'auth/user-not-found') throw e;
+    }
+    // Delete from database
+    await userRepository.delete(uid);
+  }
 }
 
 export const userService = new UserService();

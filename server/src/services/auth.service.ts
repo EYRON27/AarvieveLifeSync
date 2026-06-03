@@ -20,18 +20,21 @@ export class AuthService {
         expiresAt: expiresAt.toISOString(),
       });
 
+      const smtpUser = process.env.SMTP_USER || 'aaroncanada4@gmail.com';
+      const smtpPass = process.env.SMTP_PASS || 'dwupofalorlseitx';
+
       // Send Real Email if Configured
-      if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+      if (smtpUser && smtpPass) {
         const transporter = nodemailer.createTransport({
-          service: 'gmail', // You can change this if you use another provider
+          service: 'gmail',
           auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
+            user: smtpUser,
+            pass: smtpPass,
           },
         });
 
         await transporter.sendMail({
-          from: `"LifeSync" <${process.env.SMTP_USER}>`,
+          from: `"LifeSync" <${smtpUser}>`,
           to: email,
           subject: 'Your Password Reset OTP - LifeSync',
           html: `
@@ -85,6 +88,10 @@ export class AuthService {
   }
 
   async resetPasswordWithOTP(email: string, otp: string, newPassword: string) {
+    if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[^A-Za-z0-9]/.test(newPassword)) {
+      throw new BadRequestError('Password must be at least 8 characters and contain uppercase, lowercase, number, and special character');
+    }
+
     // Re-verify the OTP just to be safe
     const { uid } = await this.verifyPasswordResetOTP(email, otp);
     
@@ -117,17 +124,20 @@ export class AuthService {
       expiresAt: expiresAt.toISOString(),
     });
 
-    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+    const smtpUser = process.env.SMTP_USER || 'aaroncanada4@gmail.com';
+    const smtpPass = process.env.SMTP_PASS || 'dwupofalorlseitx';
+
+    if (smtpUser && smtpPass) {
       const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
+          user: smtpUser,
+          pass: smtpPass,
         },
       });
 
       await transporter.sendMail({
-        from: `"LifeSync" <${process.env.SMTP_USER}>`,
+        from: `"LifeSync" <${smtpUser}>`,
         to: email,
         subject: 'Verify your email - LifeSync',
         html: `
@@ -161,6 +171,10 @@ export class AuthService {
     if (data.otp !== otp || data.uid !== 'signup') throw new BadRequestError('Invalid OTP');
     
     if (new Date(data.expiresAt) < new Date()) throw new BadRequestError('OTP has expired');
+
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+      throw new BadRequestError('Password must be at least 8 characters and contain uppercase, lowercase, number, and special character');
+    }
 
     // 1. Create user in Firebase Admin with emailVerified: true
     const userRecord = await auth.createUser({
