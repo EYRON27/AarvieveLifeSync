@@ -39,8 +39,12 @@ export default function LoginPage() {
       }
       setIsLoading(true);
       try {
-        await authApi.requestSignupOTP(email);
-        toast.success('OTP sent to your email!');
+        const res = await authApi.requestSignupOTP(email);
+        if ((res as any).data?.mockOtp) {
+          toast.success(`Dev Fallback OTP: ${(res as any).data.mockOtp}`, { duration: 10000 });
+        } else {
+          toast.success('OTP sent to your email!');
+        }
         setSignupStep('otp');
       } catch (err: any) {
         toast.error(err.response?.data?.message || 'Failed to send OTP');
@@ -76,8 +80,12 @@ export default function LoginPage() {
     }
     setIsLoading(true);
     try {
-      await authApi.requestPasswordResetOTP(email);
-      toast.success('OTP sent to your email!');
+      const res = await authApi.requestPasswordResetOTP(email);
+      if ((res as any).data?.mockOtp) {
+        toast.success(`Dev Fallback OTP: ${(res as any).data.mockOtp}`, { duration: 10000 });
+      } else {
+        toast.success('OTP sent to your email!');
+      }
       setForgotPasswordStep('otp');
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to send OTP');
