@@ -1,15 +1,29 @@
 import admin from 'firebase-admin';
 import { config } from '../config';
 
+import fs from 'fs';
+import path from 'path';
+
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: config.firebase.projectId,
-      clientEmail: config.firebase.clientEmail,
-      privateKey: config.firebase.privateKey,
-    }),
-  });
+  const serviceAccountPath = path.resolve(process.cwd(), 'serviceAccountKey.json');
+  
+  if (fs.existsSync(serviceAccountPath)) {
+    console.log('Initializing Firebase Admin SDK with serviceAccountKey.json');
+    const serviceAccount = require(serviceAccountPath);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+  } else {
+    console.log('Initializing Firebase Admin SDK with environment variables');
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: config.firebase.projectId,
+        clientEmail: config.firebase.clientEmail,
+        privateKey: config.firebase.privateKey,
+      }),
+    });
+  }
 }
 
 export const db = admin.firestore();
