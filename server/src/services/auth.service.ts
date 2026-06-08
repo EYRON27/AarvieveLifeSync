@@ -1,7 +1,6 @@
 import { auth, collections } from '../firebase';
 import { BadRequestError } from '../utils/errors';
-
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 export class AuthService {
   async requestPasswordResetOTP(email: string) {
@@ -20,24 +19,13 @@ export class AuthService {
         expiresAt: expiresAt.toISOString(),
       });
 
-      const smtpUser = process.env.SMTP_USER || 'aaroncanada4@gmail.com';
-      const smtpPass = process.env.SMTP_PASS || 'dwupofalorlseitx';
+      const resendApiKey = process.env.RESEND_API_KEY;
 
-      // Send Real Email if Configured
-      if (smtpUser && smtpPass) {
+      if (resendApiKey) {
         try {
-          const transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com',
-            port: 465,
-            secure: true,
-            auth: {
-              user: smtpUser,
-              pass: smtpPass,
-            },
-          });
-
-          await transporter.sendMail({
-            from: `"LifeSync" <${smtpUser}>`,
+          const resend = new Resend(resendApiKey);
+          await resend.emails.send({
+            from: 'LifeSync <onboarding@resend.dev>',
             to: email,
             subject: 'Your Password Reset OTP - LifeSync',
             html: `
@@ -51,18 +39,18 @@ export class AuthService {
               </div>
             `
           });
-          console.log(`✉️ REAL OTP EMAIL SENT TO: ${email}`);
+          console.log(`✉️ OTP EMAIL SENT VIA RESEND TO: ${email}`);
           return { message: 'OTP sent successfully' };
         } catch (error) {
-          console.error(`Failed to send email to ${email}:`, error);
-          return { message: 'Failed to send real email, falling back to mock OTP', mockOtp: otp };
+          console.error(`Failed to send email via Resend to ${email}:`, error);
+          return { message: 'Failed to send email', mockOtp: otp };
         }
       } else {
-        // MOCK EMAIL SENDING
+        // MOCK EMAIL SENDING (no API key set)
         console.log(`\n==============================================`);
         console.log(`✉️ MOCK EMAIL SENT TO: ${email}`);
         console.log(`🔑 YOUR PASSWORD RESET OTP IS: ${otp}`);
-        console.log(`⚠️  WARNING: SMTP_USER and SMTP_PASS not set in .env. Real email was NOT sent.`);
+        console.log(`⚠️  WARNING: RESEND_API_KEY not set in .env. Real email was NOT sent.`);
         console.log(`==============================================\n`);
         return { message: 'OTP sent successfully, check server logs', mockOtp: otp };
       }
@@ -131,23 +119,13 @@ export class AuthService {
       expiresAt: expiresAt.toISOString(),
     });
 
-    const smtpUser = process.env.SMTP_USER || 'aaroncanada4@gmail.com';
-    const smtpPass = process.env.SMTP_PASS || 'dwupofalorlseitx';
+    const resendApiKey = process.env.RESEND_API_KEY;
 
-    if (smtpUser && smtpPass) {
+    if (resendApiKey) {
       try {
-        const transporter = nodemailer.createTransport({
-          host: 'smtp.gmail.com',
-          port: 465,
-          secure: true,
-          auth: {
-            user: smtpUser,
-            pass: smtpPass,
-          },
-        });
-
-        await transporter.sendMail({
-          from: `"LifeSync" <${smtpUser}>`,
+        const resend = new Resend(resendApiKey);
+        await resend.emails.send({
+          from: 'LifeSync <onboarding@resend.dev>',
           to: email,
           subject: 'Verify your email - LifeSync',
           html: `
@@ -161,11 +139,11 @@ export class AuthService {
             </div>
           `
         });
-        console.log(`✉️ REAL SIGNUP OTP EMAIL SENT TO: ${email}`);
+        console.log(`✉️ SIGNUP OTP EMAIL SENT VIA RESEND TO: ${email}`);
         return { message: 'Signup OTP sent successfully' };
       } catch (error) {
-        console.error(`Failed to send email to ${email}:`, error);
-        return { message: 'Failed to send real email, falling back to mock OTP', mockOtp: otp };
+        console.error(`Failed to send signup email via Resend to ${email}:`, error);
+        return { message: 'Failed to send email', mockOtp: otp };
       }
     } else {
       console.log(`\n==============================================`);
