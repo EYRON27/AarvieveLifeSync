@@ -1,7 +1,6 @@
 import { auth, collections } from '../firebase';
 import { BadRequestError } from '../utils/errors';
-
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 export class AuthService {
   async requestPasswordResetOTP(email: string) {
@@ -19,24 +18,15 @@ export class AuthService {
         expiresAt: expiresAt.toISOString(),
       });
 
-      const smtpUser = process.env.SMTP_USER || 'aaroncanada4@gmail.com';
-      const smtpPass = process.env.SMTP_PASS || 'dwupofalorlseitx';
+      const resendKey = process.env.RESEND_API_KEY;
+      const resendFrom = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
       // Send Real Email if Configured
-      if (smtpUser && smtpPass) {
+      if (resendKey && !resendKey.includes('YOUR_API_KEY')) {
         try {
-          const transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com',
-            port: 465,
-            secure: true,
-            auth: {
-              user: smtpUser,
-              pass: smtpPass,
-            },
-          });
-
-          await transporter.sendMail({
-            from: `"LifeSync" <${smtpUser}>`,
+          const resend = new Resend(resendKey);
+          await resend.emails.send({
+            from: `"LifeSync" <${resendFrom}>`,
             to: email,
             subject: 'Your Password Reset OTP - LifeSync',
             html: `
@@ -50,7 +40,7 @@ export class AuthService {
               </div>
             `
           });
-          console.log(`✉️ REAL OTP EMAIL SENT TO: ${email}`);
+          console.log(`✉️ REAL OTP EMAIL SENT TO: ${email} via Resend`);
           return { message: 'OTP sent successfully' };
         } catch (error) {
           console.error(`Failed to send email to ${email}:`, error);
@@ -61,7 +51,7 @@ export class AuthService {
         console.log(`\n==============================================`);
         console.log(`✉️ MOCK EMAIL SENT TO: ${email}`);
         console.log(`🔑 YOUR PASSWORD RESET OTP IS: ${otp}`);
-        console.log(`⚠️  WARNING: SMTP_USER and SMTP_PASS not set in .env. Real email was NOT sent.`);
+        console.log(`⚠️  WARNING: RESEND_API_KEY not configured. Real email was NOT sent.`);
         console.log(`==============================================\n`);
         return { message: 'OTP sent successfully, check server logs', mockOtp: otp };
       }
@@ -136,23 +126,14 @@ export class AuthService {
       expiresAt: expiresAt.toISOString(),
     });
 
-    const smtpUser = process.env.SMTP_USER || 'aaroncanada4@gmail.com';
-    const smtpPass = process.env.SMTP_PASS || 'dwupofalorlseitx';
+    const resendKey = process.env.RESEND_API_KEY;
+    const resendFrom = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
-    if (smtpUser && smtpPass) {
+    if (resendKey && !resendKey.includes('YOUR_API_KEY')) {
       try {
-        const transporter = nodemailer.createTransport({
-          host: 'smtp.gmail.com',
-          port: 465,
-          secure: true,
-          auth: {
-            user: smtpUser,
-            pass: smtpPass,
-          },
-        });
-
-        await transporter.sendMail({
-          from: `"LifeSync" <${smtpUser}>`,
+        const resend = new Resend(resendKey);
+        await resend.emails.send({
+          from: `"LifeSync" <${resendFrom}>`,
           to: email,
           subject: 'Verify your email - LifeSync',
           html: `
@@ -166,7 +147,7 @@ export class AuthService {
             </div>
           `
         });
-        console.log(`✉️ REAL SIGNUP OTP EMAIL SENT TO: ${email}`);
+        console.log(`✉️ REAL SIGNUP OTP EMAIL SENT TO: ${email} via Resend`);
         return { message: 'Signup OTP sent successfully' };
       } catch (error) {
         console.error(`Failed to send email to ${email}:`, error);
