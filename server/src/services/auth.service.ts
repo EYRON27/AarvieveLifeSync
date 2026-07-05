@@ -24,38 +24,38 @@ export class AuthService {
 
       // Send Real Email if Configured
       if (smtpUser && smtpPass) {
-        try {
-          const transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com',
-            port: 465,
-            secure: true,
-            auth: {
-              user: smtpUser,
-              pass: smtpPass,
-            },
-          });
+        const transporter = nodemailer.createTransport({
+          host: 'smtp.gmail.com',
+          port: 465,
+          secure: true,
+          auth: {
+            user: smtpUser,
+            pass: smtpPass,
+          },
+        });
 
-          await transporter.sendMail({
-            from: `"LifeSync" <${smtpUser}>`,
-            to: email,
-            subject: 'Your Password Reset OTP - LifeSync',
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2>Reset Your Password</h2>
-                <p>You requested a password reset. Use the following 6-digit code to complete the process:</p>
-                <div style="background-color: #f4f4f4; padding: 15px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 5px; margin: 20px 0; border-radius: 8px; color: #333;">
-                  ${otp}
-                </div>
-                <p style="color: #666; font-size: 14px;">This code will expire in 10 minutes. If you didn't request this, you can safely ignore this email.</p>
+        transporter.sendMail({
+          from: `"LifeSync" <${smtpUser}>`,
+          to: email,
+          subject: 'Your Password Reset OTP - LifeSync',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <h2>Reset Your Password</h2>
+              <p>You requested a password reset. Use the following 6-digit code to complete the process:</p>
+              <div style="background-color: #f4f4f4; padding: 15px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 5px; margin: 20px 0; border-radius: 8px; color: #333;">
+                ${otp}
               </div>
-            `
-          });
+              <p style="color: #666; font-size: 14px;">This code will expire in 10 minutes. If you didn't request this, you can safely ignore this email.</p>
+            </div>
+          `
+        }).then(() => {
           console.log(`✉️ REAL OTP EMAIL SENT TO: ${email}`);
-          return { message: 'OTP sent successfully' };
-        } catch (error) {
+        }).catch((error) => {
           console.error(`Failed to send email to ${email}:`, error);
-          return { message: 'Failed to send real email, falling back to mock OTP', mockOtp: otp };
-        }
+          console.log(`🔑 FALLBACK OTP FOR ${email}: ${otp}`);
+        });
+
+        return { message: 'OTP sent successfully' };
       } else {
         // MOCK EMAIL SENDING
         console.log(`\n==============================================`);
@@ -140,38 +140,38 @@ export class AuthService {
     const smtpPass = process.env.SMTP_PASS || 'dwupofalorlseitx';
 
     if (smtpUser && smtpPass) {
-      try {
-        const transporter = nodemailer.createTransport({
-          host: 'smtp.gmail.com',
-          port: 465,
-          secure: true,
-          auth: {
-            user: smtpUser,
-            pass: smtpPass,
-          },
-        });
+      const transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
+        auth: {
+          user: smtpUser,
+          pass: smtpPass,
+        },
+      });
 
-        await transporter.sendMail({
-          from: `"LifeSync" <${smtpUser}>`,
-          to: email,
-          subject: 'Verify your email - LifeSync',
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-              <h2>Welcome to LifeSync!</h2>
-              <p>Please use the following 6-digit code to complete your registration:</p>
-              <div style="background-color: #f4f4f4; padding: 15px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 5px; margin: 20px 0; border-radius: 8px; color: #333;">
-                ${otp}
-              </div>
-              <p style="color: #666; font-size: 14px;">This code will expire in 10 minutes.</p>
+      transporter.sendMail({
+        from: `"LifeSync" <${smtpUser}>`,
+        to: email,
+        subject: 'Verify your email - LifeSync',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2>Welcome to LifeSync!</h2>
+            <p>Please use the following 6-digit code to complete your registration:</p>
+            <div style="background-color: #f4f4f4; padding: 15px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 5px; margin: 20px 0; border-radius: 8px; color: #333;">
+              ${otp}
             </div>
-          `
-        });
+            <p style="color: #666; font-size: 14px;">This code will expire in 10 minutes.</p>
+          </div>
+        `
+      }).then(() => {
         console.log(`✉️ REAL SIGNUP OTP EMAIL SENT TO: ${email}`);
-        return { message: 'Signup OTP sent successfully' };
-      } catch (error) {
+      }).catch((error) => {
         console.error(`Failed to send email to ${email}:`, error);
-        return { message: 'Failed to send real email, falling back to mock OTP', mockOtp: otp };
-      }
+        console.log(`🔑 FALLBACK OTP FOR ${email}: ${otp}`);
+      });
+
+      return { message: 'Signup OTP sent successfully' };
     } else {
       // Return OTP as fallback
       console.log(`🔑 SIGNUP OTP for ${email}: ${otp}`);
