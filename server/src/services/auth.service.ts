@@ -1,63 +1,7 @@
 import { auth, collections } from '../firebase';
 import { BadRequestError } from '../utils/errors';
-import { Resend } from 'resend';
 
-const getResendClient = () => {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return null;
-  return new Resend(apiKey);
-};
-
-const OTP_HTML = (otp: string, title: string, body: string) => `
-  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #0f172a; color: #e2e8f0; border-radius: 12px;">
-    <div style="text-align: center; margin-bottom: 24px;">
-      <div style="display: inline-block; width: 48px; height: 48px; background: linear-gradient(135deg, #14b8a6, #6366f1); border-radius: 12px; line-height: 48px; font-size: 24px; font-weight: bold; color: white;">A</div>
-      <h2 style="color: #f1f5f9; margin-top: 12px;">${title}</h2>
-    </div>
-    <p style="color: #94a3b8;">${body}</p>
-    <div style="background: #1e293b; border: 1px solid #334155; padding: 20px; text-align: center; font-size: 36px; font-weight: bold; letter-spacing: 10px; margin: 24px 0; border-radius: 10px; color: #14b8a6;">
-      ${otp}
-    </div>
-    <p style="color: #64748b; font-size: 13px;">This code expires in 10 minutes. If you didn't request this, ignore this email.</p>
-    <hr style="border: none; border-top: 1px solid #1e293b; margin: 24px 0;" />
-    <p style="color: #475569; font-size: 12px; text-align: center;">AarvieveLifeSync — Your Personal Productivity Hub</p>
-  </div>
-`;
-
-async function sendOTPEmail(to: string, subject: string, html: string): Promise<{ sent: boolean; mockOtp?: string; otp?: string }> {
-  const resend = getResendClient();
-
-  if (!resend) {
-    // No API key configured — log to console as fallback
-    console.log(`\n==============================================`);
-    console.log(`✉️  MOCK EMAIL TO: ${to}`);
-    console.log(`📧  Subject: ${subject}`);
-    console.log(`⚠️  RESEND_API_KEY not set. OTP is in the html payload.`);
-    console.log(`==============================================\n`);
-    return { sent: false };
-  }
-
-  try {
-    const fromAddress = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
-    const { error } = await resend.emails.send({
-      from: `LifeSync <${fromAddress}>`,
-      to,
-      subject,
-      html,
-    });
-
-    if (error) {
-      console.error('Resend API error:', error);
-      return { sent: false };
-    }
-
-    console.log(`✉️  Email sent via Resend to: ${to}`);
-    return { sent: true };
-  } catch (err) {
-    console.error('Resend send failed:', err);
-    return { sent: false };
-  }
-}
+import nodemailer from 'nodemailer';
 
 export class AuthService {
   async requestPasswordResetOTP(email: string) {
@@ -75,24 +19,51 @@ export class AuthService {
         expiresAt: expiresAt.toISOString(),
       });
 
-      const html = OTP_HTML(
-        otp,
-        'Reset Your Password',
-        'You requested a password reset. Use the code below to complete the process:'
-      );
+      const smtpUser = process.env.SMTP_USER || 'aaroncanada4@gmail.com';
+      const smtpPass = process.env.SMTP_PASS || 'dwupofalorlseitx';
 
-      const result = await sendOTPEmail(
-        email,
-        'Your Password Reset OTP — LifeSync',
-        html
-      );
+      // Send Real Email if Configured
+      if (smtpUser && smtpPass) {
+        try {
+          const transporter = nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true,
+            auth: {
+              user: smtpUser,
+              pass: smtpPass,
+            },
+          });
 
-      if (result.sent) {
-        return { message: 'OTP sent to your email' };
+          await transporter.sendMail({
+            from: `"LifeSync" <${smtpUser}>`,
+            to: email,
+            subject: 'Your Password Reset OTP - LifeSync',
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2>Reset Your Password</h2>
+                <p>You requested a password reset. Use the following 6-digit code to complete the process:</p>
+                <div style="background-color: #f4f4f4; padding: 15px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 5px; margin: 20px 0; border-radius: 8px; color: #333;">
+                  ${otp}
+                </div>
+                <p style="color: #666; font-size: 14px;">This code will expire in 10 minutes. If you didn't request this, you can safely ignore this email.</p>
+              </div>
+            `
+          });
+          console.log(`✉️ REAL OTP EMAIL SENT TO: ${email}`);
+          return { message: 'OTP sent successfully' };
+        } catch (error) {
+          console.error(`Failed to send email to ${email}:`, error);
+          return { message: 'Failed to send real email, falling back to mock OTP', mockOtp: otp };
+        }
       } else {
-        // Return OTP directly as fallback so user can still proceed
-        console.log(`🔑 PASSWORD RESET OTP for ${email}: ${otp}`);
-        return { message: 'Email service not configured. Use the OTP shown.', mockOtp: otp };
+        // MOCK EMAIL SENDING
+        console.log(`\n==============================================`);
+        console.log(`✉️ MOCK EMAIL SENT TO: ${email}`);
+        console.log(`🔑 YOUR PASSWORD RESET OTP IS: ${otp}`);
+        console.log(`⚠️  WARNING: SMTP_USER and SMTP_PASS not set in .env. Real email was NOT sent.`);
+        console.log(`==============================================\n`);
+        return { message: 'OTP sent successfully, check server logs', mockOtp: otp };
       }
     } catch (error: any) {
       if (error.code === 'auth/user-not-found') {
@@ -165,20 +136,42 @@ export class AuthService {
       expiresAt: expiresAt.toISOString(),
     });
 
-    const html = OTP_HTML(
-      otp,
-      'Welcome to LifeSync!',
-      'Please use the code below to complete your registration:'
-    );
+    const smtpUser = process.env.SMTP_USER || 'aaroncanada4@gmail.com';
+    const smtpPass = process.env.SMTP_PASS || 'dwupofalorlseitx';
 
-    const result = await sendOTPEmail(
-      email,
-      'Verify your email — LifeSync',
-      html
-    );
+    if (smtpUser && smtpPass) {
+      try {
+        const transporter = nodemailer.createTransport({
+          host: 'smtp.gmail.com',
+          port: 465,
+          secure: true,
+          auth: {
+            user: smtpUser,
+            pass: smtpPass,
+          },
+        });
 
-    if (result.sent) {
-      return { message: 'OTP sent to your email' };
+        await transporter.sendMail({
+          from: `"LifeSync" <${smtpUser}>`,
+          to: email,
+          subject: 'Verify your email - LifeSync',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <h2>Welcome to LifeSync!</h2>
+              <p>Please use the following 6-digit code to complete your registration:</p>
+              <div style="background-color: #f4f4f4; padding: 15px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 5px; margin: 20px 0; border-radius: 8px; color: #333;">
+                ${otp}
+              </div>
+              <p style="color: #666; font-size: 14px;">This code will expire in 10 minutes.</p>
+            </div>
+          `
+        });
+        console.log(`✉️ REAL SIGNUP OTP EMAIL SENT TO: ${email}`);
+        return { message: 'Signup OTP sent successfully' };
+      } catch (error) {
+        console.error(`Failed to send email to ${email}:`, error);
+        return { message: 'Failed to send real email, falling back to mock OTP', mockOtp: otp };
+      }
     } else {
       // Return OTP as fallback
       console.log(`🔑 SIGNUP OTP for ${email}: ${otp}`);
