@@ -44,6 +44,21 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
     }
   }, [useAuthStore(state => state.isAuthenticated)]);
 
+  useEffect(() => {
+    // Keep-alive ping to prevent Render free tier from spinning down
+    // Render shuts down after 15 min of inactivity — ping every 14 min to keep it warm
+    const API_BASE = (import.meta.env.VITE_API_URL || '/api').replace(/\/api$/, '');
+    const ping = () => {
+      fetch(`${API_BASE}/health`, { method: 'GET', mode: 'no-cors' }).catch(() => {
+        // Silently ignore — this is just a keep-alive, not critical
+      });
+    };
+
+    ping(); // Ping immediately on load
+    const interval = setInterval(ping, 14 * 60 * 1000); // Every 14 minutes
+    return () => clearInterval(interval);
+  }, []);
+
   return <>{children}</>;
 }
 
