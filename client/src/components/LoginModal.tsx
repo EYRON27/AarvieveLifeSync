@@ -213,6 +213,21 @@ export default function LoginModal() {
     }
   };
 
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6).split('');
+    if (pastedData.length === 0) return;
+    
+    const newOtp = [...otp];
+    pastedData.forEach((char, i) => {
+      if (i < 6) newOtp[i] = char;
+    });
+    setOtp(newOtp);
+    
+    const nextIndex = Math.min(pastedData.length, 5);
+    otpRefs.current[nextIndex]?.focus();
+  };
+
   const handleSignupOtpChange = (index: number, value: string) => {
     if (value.length > 1) return;
     const newOtp = [...signupOtp];
@@ -227,6 +242,21 @@ export default function LoginModal() {
     if (e.key === 'Backspace' && signupOtp[index] === '' && index > 0) {
       signupOtpRefs.current[index - 1]?.focus();
     }
+  };
+
+  const handleSignupOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6).split('');
+    if (pastedData.length === 0) return;
+    
+    const newOtp = [...signupOtp];
+    pastedData.forEach((char, i) => {
+      if (i < 6) newOtp[i] = char;
+    });
+    setSignupOtp(newOtp);
+    
+    const nextIndex = Math.min(pastedData.length, 5);
+    signupOtpRefs.current[nextIndex]?.focus();
   };
 
   const handleVerifySignupOTP = async (e: React.FormEvent) => {
@@ -325,6 +355,7 @@ export default function LoginModal() {
                               value={digit}
                               onChange={(e) => handleOtpChange(idx, e.target.value)}
                               onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                              onPaste={handleOtpPaste}
                               className="w-12 h-14 text-center rounded-xl bg-black/20 border border-white/[0.08] text-white text-xl font-bold focus:outline-none focus:border-[#5c7cfa] focus:bg-white/[0.03] transition-all"
                               required
                             />
@@ -433,6 +464,7 @@ export default function LoginModal() {
                                 value={digit}
                                 onChange={(e) => handleSignupOtpChange(idx, e.target.value)}
                                 onKeyDown={(e) => handleSignupOtpKeyDown(idx, e)}
+                                onPaste={handleSignupOtpPaste}
                                 className="w-12 h-14 text-center rounded-xl bg-black/20 border border-white/[0.08] text-white text-xl font-bold focus:outline-none focus:border-[#5c7cfa] focus:bg-white/[0.03] transition-all"
                                 required
                               />
